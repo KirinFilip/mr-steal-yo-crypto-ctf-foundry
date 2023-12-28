@@ -7,6 +7,8 @@ import {console} from "forge-std/console.sol";
 // core contracts
 import {GameAsset} from "src/game-assets/GameAsset.sol";
 import {AssetWrapper} from "src/game-assets/AssetWrapper.sol";
+// attack contract
+import {GameAssetsAttack} from "test/AttackContracts/3-GameAssetsAttack.sol";
 
 contract Testing is Test {
     address attacker = makeAddr("attacker");
@@ -18,6 +20,8 @@ contract Testing is Test {
     AssetWrapper assetWrapper;
     GameAsset swordAsset;
     GameAsset shieldAsset;
+
+    GameAssetsAttack attackContract;
 
     /// preliminary state
     function setUp() public {
@@ -60,6 +64,8 @@ contract Testing is Test {
         vm.startPrank(attacker, attacker);
 
         // implement solution here
+        attackContract = new GameAssetsAttack(address(assetWrapper), address(swordAsset), address(shieldAsset));
+        attackContract.attack();
 
         vm.stopPrank();
         validation();

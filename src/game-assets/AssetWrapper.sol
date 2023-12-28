@@ -51,7 +51,7 @@ contract AssetWrapper is AssetHolder, Ownable {
     /// @param assetAddress Address of the GameAsset contract
     function wrap(uint256 nftId, address assetOwner, address assetAddress) public {
         require(isWhitelisted(assetAddress), "Wrapper: asset not whitelisted");
-        _wrap(assetOwner, assetAddress, nftId);
+        _wrap(assetOwner, assetAddress, nftId); // mints an ERC1155 token to assetOwner
 
         IGameAsset asset = IGameAsset(assetAddress);
         address owner = asset.ownerOf(nftId);
