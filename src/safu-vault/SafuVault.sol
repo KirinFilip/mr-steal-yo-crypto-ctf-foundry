@@ -115,17 +115,18 @@ contract SafuVault is ERC20, Ownable, ReentrancyGuard {
     ) public {
         strategy.beforeDeposit();
 
-        uint256 _pool = balance();
+        uint256 _pool = balance(); // 10000e18, 11000e18, 12000e18... 19000e18
         IERC20(token).safeTransferFrom(msg.sender, address(this), _amount);
         earn();
-        uint256 _after = balance();
-        _amount = _after - _pool; // Additional check for deflationary tokens
+        uint256 _after = balance(); // 20000e18
+        _amount = _after - _pool; // 20000e18 - 19000e18, 20000e18 - 18000e18..., 20000e18 - 10000e18
 
         uint256 shares;
         if (totalSupply() == 0) {
             shares = _amount;
         } else {
             shares = (_amount * totalSupply()) / (_pool);
+            // 526e18 + 1169e18 + 2063e18 + 3439e18 + 5733e18 + 9828e18 + 17640e18 + 33600e18 + 68730e18 + 152720e18 = 295448e18 shares
         }
         _mint(user, shares);
     }

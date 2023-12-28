@@ -9,7 +9,7 @@ import {Token} from "src/other/Token.sol";
 import {SafuStrategy} from "src/safu-vault/SafuStrategy.sol";
 import {SafuVault, IStrategy} from "src/safu-vault/SafuVault.sol";
 
-import {Attack} from "./AttackContracts/2-SafuVaultAttack.sol";
+import {SafuVaultAttack} from "./AttackContracts/2-SafuVaultAttack.sol";
 
 contract Testing is Test {
     address attacker = makeAddr("attacker");
@@ -69,9 +69,9 @@ contract Testing is Test {
     function testChallengeExploit() public {
         vm.startPrank(attacker, attacker);
 
-        Attack attack = new Attack(address(safuVault), address(usdc));
-        usdc.transfer(address(attack), 10_000e18);
-        attack.startAttack();
+        SafuVaultAttack attackContract = new SafuVaultAttack(address(safuVault), address(usdc));
+        usdc.transfer(address(attackContract), 10_000e18);
+        attackContract.startAttack();
 
         vm.stopPrank();
         validation();
@@ -84,5 +84,8 @@ contract Testing is Test {
             usdc.balanceOf(address(safuStrategy));
         assertLe(totalVaultFunds, 1_000e18);
         assertGe(usdc.balanceOf(attacker), 19_000e18);
+
+        console.log(totalVaultFunds);
+        console.log(usdc.balanceOf(attacker));
     }
 }
