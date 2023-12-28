@@ -7,29 +7,25 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
 
-
 /// @dev safu yield generation strategy
 /// @dev this strategy takes in {want} & generates {want} using its yield generator
 /// @dev the yield generator is abstracted away bc it's not relevant to the exploit
 /// @dev therefore you will see unimplemented logic for interacting w/ the generator
 contract SafuStrategy is Ownable, Pausable {
-
     using SafeERC20 for IERC20;
     using Address for address;
 
     address public want; // deposit & withdrawal token
     address public vault; // safu vault
 
-    mapping (address => bool) public whitelist;
+    mapping(address => bool) public whitelist;
 
     modifier onlyWhitelisted() {
         require(whitelist[msg.sender] == true, "not whitelisted");
         _;
     }
-     
-    constructor(
-        address _want
-    ) {
+
+    constructor(address _want) {
         want = _want;
         whitelist[msg.sender] = true;
     }
@@ -41,13 +37,10 @@ contract SafuStrategy is Ownable, Pausable {
     }
 
     /// @dev functionality for updating the whitelist
-    function addOrRemoveFromWhitelist(
-        address add, 
-        bool isAdd
-    ) public onlyOwner {
+    function addOrRemoveFromWhitelist(address add, bool isAdd) public onlyOwner {
         whitelist[add] = isAdd;
-    } 
-     
+    }
+
     /// @dev puts the funds to work
     /// @dev called whenever someone deposits into this strategy's vault contract
     function deposit() public whenNotPaused {
@@ -72,7 +65,7 @@ contract SafuStrategy is Ownable, Pausable {
             wantBal = _amount;
         }
 
-        IERC20(want).safeTransfer(vault, wantBal); 
+        IERC20(want).safeTransfer(vault, wantBal);
     }
 
     /// @dev handles required functionality before vault deposits to strategy
@@ -83,7 +76,7 @@ contract SafuStrategy is Ownable, Pausable {
             deposit();
             sellHarvest();
         }
-    } 
+    }
 
     /// @dev runs a single instance of harvesting
     function harvest() external whenNotPaused onlyWhitelisted {
@@ -102,7 +95,7 @@ contract SafuStrategy is Ownable, Pausable {
     /// @dev takes into account funds at hand + funds allocated in yield generator
     /// @dev HOWEVER yield generator is abstracted so it is ignored here (0)
     function balanceOf() public view returns (uint256) {
-        return balanceOfWant()+0; // yield generator balance is 0
+        return balanceOfWant() + 0; // yield generator balance is 0
     }
 
     /// @dev returns balance of {want} in this contract
@@ -119,5 +112,4 @@ contract SafuStrategy is Ownable, Pausable {
     function unpause() external onlyOwner {
         _unpause();
     }
-
 }

@@ -11,13 +11,12 @@ import "@openzeppelin/contracts/utils/introspection/ERC165.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
 
-
 /// @dev represents single instance of a game asset as an ERC721
 /// @dev only contract owner can mint game assets for a user
 /// @dev custom implementation of ERC721 to allow finer-grained operator control
 contract GameAsset is Context, ERC165, IERC721, IERC721Metadata, Ownable {
-
     using Counters for Counters.Counter;
+
     Counters.Counter private _tokenId;
 
     // operator is all powerful in acting on assets
@@ -56,16 +55,14 @@ contract GameAsset is Context, ERC165, IERC721, IERC721Metadata, Ownable {
      * @dev See {IERC165-supportsInterface}.
      */
     function supportsInterface(bytes4 interfaceId) public view virtual override(ERC165, IERC165) returns (bool) {
-        return
-            interfaceId == type(IERC721).interfaceId ||
-            interfaceId == type(IERC721Metadata).interfaceId ||
-            super.supportsInterface(interfaceId);
+        return interfaceId == type(IERC721).interfaceId || interfaceId == type(IERC721Metadata).interfaceId
+            || super.supportsInterface(interfaceId);
     }
 
     /// @dev mints n number of NFTs per user
     /// @dev only contract owner can mint NFTs for users
     function mintForUser(address to, uint256 quantity) external onlyOwner {
-        for (uint256 i=0; i<quantity; i++) {
+        for (uint256 i = 0; i < quantity; i++) {
             _mint(to, _tokenId.current());
             _tokenId.increment();
         }
@@ -79,16 +76,13 @@ contract GameAsset is Context, ERC165, IERC721, IERC721Metadata, Ownable {
 
     /// @dev allows operator to change ownership of any token `tokenId` to `to`
     /// @dev used for the wrapping/unwrapping functionality
-    function setOwnerOperator(
-        address to,
-        uint256 tokenId
-    ) external {
+    function setOwnerOperator(address to, uint256 tokenId) external {
         require(msg.sender == operator, "Asset: caller not operator");
 
         address from = GameAsset.ownerOf(tokenId);
 
         _beforeTokenTransfer(from, to, tokenId);
-            
+
         // Clear approvals from the previous owner
         _approve(address(0), tokenId);
 
@@ -192,11 +186,7 @@ contract GameAsset is Context, ERC165, IERC721, IERC721Metadata, Ownable {
     /**
      * @dev See {IERC721-transferFrom}.
      */
-    function transferFrom(
-        address from,
-        address to,
-        uint256 tokenId
-    ) public virtual override {
+    function transferFrom(address from, address to, uint256 tokenId) public virtual override {
         //solhint-disable-next-line max-line-length
         require(_isApprovedOrOwner(_msgSender(), tokenId), "ERC721: caller is not token owner nor approved");
 
@@ -206,23 +196,14 @@ contract GameAsset is Context, ERC165, IERC721, IERC721Metadata, Ownable {
     /**
      * @dev See {IERC721-safeTransferFrom}.
      */
-    function safeTransferFrom(
-        address from,
-        address to,
-        uint256 tokenId
-    ) public virtual override {
+    function safeTransferFrom(address from, address to, uint256 tokenId) public virtual override {
         safeTransferFrom(from, to, tokenId, "");
     }
 
     /**
      * @dev See {IERC721-safeTransferFrom}.
      */
-    function safeTransferFrom(
-        address from,
-        address to,
-        uint256 tokenId,
-        bytes memory data
-    ) public virtual override {
+    function safeTransferFrom(address from, address to, uint256 tokenId, bytes memory data) public virtual override {
         require(_isApprovedOrOwner(_msgSender(), tokenId), "ERC721: caller is not token owner nor approved");
         _safeTransfer(from, to, tokenId, data);
     }
@@ -245,12 +226,7 @@ contract GameAsset is Context, ERC165, IERC721, IERC721Metadata, Ownable {
      *
      * Emits a {Transfer} event.
      */
-    function _safeTransfer(
-        address from,
-        address to,
-        uint256 tokenId,
-        bytes memory data
-    ) internal virtual {
+    function _safeTransfer(address from, address to, uint256 tokenId, bytes memory data) internal virtual {
         _transfer(from, to, tokenId);
         require(_checkOnERC721Received(from, to, tokenId, data), "ERC721: transfer to non ERC721Receiver implementer");
     }
@@ -297,15 +273,10 @@ contract GameAsset is Context, ERC165, IERC721, IERC721Metadata, Ownable {
      * @dev Same as {xref-ERC721-_safeMint-address-uint256-}[`_safeMint`], with an additional `data` parameter which is
      * forwarded in {IERC721Receiver-onERC721Received} to contract recipients.
      */
-    function _safeMint(
-        address to,
-        uint256 tokenId,
-        bytes memory data
-    ) internal virtual {
+    function _safeMint(address to, uint256 tokenId, bytes memory data) internal virtual {
         _mint(to, tokenId);
         require(
-            _checkOnERC721Received(address(0), to, tokenId, data),
-            "ERC721: transfer to non ERC721Receiver implementer"
+            _checkOnERC721Received(address(0), to, tokenId, data), "ERC721: transfer to non ERC721Receiver implementer"
         );
     }
 
@@ -372,11 +343,7 @@ contract GameAsset is Context, ERC165, IERC721, IERC721Metadata, Ownable {
      *
      * Emits a {Transfer} event.
      */
-    function _transfer(
-        address from,
-        address to,
-        uint256 tokenId
-    ) internal virtual {
+    function _transfer(address from, address to, uint256 tokenId) internal virtual {
         require(GameAsset.ownerOf(tokenId) == from, "ERC721: transfer from incorrect owner");
         require(to != address(0), "ERC721: transfer to the zero address");
 
@@ -409,11 +376,7 @@ contract GameAsset is Context, ERC165, IERC721, IERC721Metadata, Ownable {
      *
      * Emits an {ApprovalForAll} event.
      */
-    function _setApprovalForAll(
-        address owner,
-        address operator,
-        bool approved
-    ) internal virtual {
+    function _setApprovalForAll(address owner, address operator, bool approved) internal virtual {
         require(owner != operator, "ERC721: approve to caller");
         _operatorApprovals[owner][operator] = approved;
         emit ApprovalForAll(owner, operator, approved);
@@ -436,12 +399,10 @@ contract GameAsset is Context, ERC165, IERC721, IERC721Metadata, Ownable {
      * @param data bytes optional data to send along with the call
      * @return bool whether the call correctly returned the expected magic value
      */
-    function _checkOnERC721Received(
-        address from,
-        address to,
-        uint256 tokenId,
-        bytes memory data
-    ) private returns (bool) {
+    function _checkOnERC721Received(address from, address to, uint256 tokenId, bytes memory data)
+        private
+        returns (bool)
+    {
         if (to.isContract()) {
             try IERC721Receiver(to).onERC721Received(_msgSender(), from, tokenId, data) returns (bytes4 retval) {
                 return retval == IERC721Receiver.onERC721Received.selector;
@@ -474,11 +435,7 @@ contract GameAsset is Context, ERC165, IERC721, IERC721Metadata, Ownable {
      *
      * To learn more about hooks, head to xref:ROOT:extending-contracts.adoc#using-hooks[Using Hooks].
      */
-    function _beforeTokenTransfer(
-        address from,
-        address to,
-        uint256 tokenId
-    ) internal virtual {}
+    function _beforeTokenTransfer(address from, address to, uint256 tokenId) internal virtual {}
 
     /**
      * @dev Hook that is called after any transfer of tokens. This includes
@@ -491,10 +448,5 @@ contract GameAsset is Context, ERC165, IERC721, IERC721Metadata, Ownable {
      *
      * To learn more about hooks, head to xref:ROOT:extending-contracts.adoc#using-hooks[Using Hooks].
      */
-    function _afterTokenTransfer(
-        address from,
-        address to,
-        uint256 tokenId
-    ) internal virtual {}
-
+    function _afterTokenTransfer(address from, address to, uint256 tokenId) internal virtual {}
 }

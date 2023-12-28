@@ -6,10 +6,8 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
-
 /// @dev Implements the logic for issuing, exercising issued options
 contract OptionsLogic is Ownable, ERC20 {
-
     using SafeERC20 for IERC20;
     using SafeMath for uint256;
 
@@ -67,28 +65,28 @@ contract OptionsLogic is Ownable, ERC20 {
     }
 
     /**
-    * @dev The underlying asset will always be ETH
-    * @dev Precision for all assets & conversions is fixed to 1e18
-    * @param _collateral The collateral asset (always USDC)
-    * @param _strikePrice The amount of strike asset that will be paid out
-    * @param _strike The asset in which the insurance is calculated (always USDC)
-    * @param _expiry The time at which the insurance expires
-    */
+     * @dev The underlying asset will always be ETH
+     * @dev Precision for all assets & conversions is fixed to 1e18
+     * @param _collateral The collateral asset (always USDC)
+     * @param _strikePrice The amount of strike asset that will be paid out
+     * @param _strike The asset in which the insurance is calculated (always USDC)
+     * @param _expiry The time at which the insurance expires
+     */
     constructor(
         IERC20 _collateral, // USDC
         uint256 _strikePrice, // amount USDC you can sell 1 ETH for
         IERC20 _strike, // USDC
         uint256 _expiry
-    ) ERC20('oToken','oToken') {
+    ) ERC20("oToken", "oToken") {
         require(block.timestamp < _expiry, "Can't deploy an expired contract");
-        require(_collateral == _strike,'invalid tokens');
+        require(_collateral == _strike, "invalid tokens");
 
         windowSize = _expiry; // negates window size
         expiry = _expiry;
 
         collateral = _collateral;
 
-        oTokenExchangeRate = Number(1,-18);
+        oTokenExchangeRate = Number(1, -18);
 
         strikePrice = Number(_strikePrice, -18);
         strike = _strike;
@@ -121,13 +119,9 @@ contract OptionsLogic is Ownable, ERC20 {
      * risk of losing the collateral. Ensure that you issue and immediately sell the oTokens!
      * @param amt the amount of collateral to be transferred in.
      */
-    function addERC20Collateral(uint256 amt)
-        public
-        notExpired
-        returns (uint256)
-    {
+    function addERC20Collateral(uint256 amt) public notExpired returns (uint256) {
         collateral.safeTransferFrom(msg.sender, address(this), amt);
-        
+
         require(hasVault(msg.sender), "Vault does not exist");
         Vault storage vault = vaults[msg.sender];
 
@@ -144,23 +138,16 @@ contract OptionsLogic is Ownable, ERC20 {
     /**
      * @notice Returns the amount of underlying to be transferred during an exercise call
      */
-    function underlyingRequiredToExercise(uint256 oTokensToExercise)
-        public
-        view
-        returns (uint256)
-    {
-        uint64 underlyingPerOTokenExp = uint64(
-            uint32(oTokenExchangeRate.exponent - underlyingExp)
-        );
-        return oTokensToExercise.mul(10**underlyingPerOTokenExp);
+    function underlyingRequiredToExercise(uint256 oTokensToExercise) public view returns (uint256) {
+        uint64 underlyingPerOTokenExp = uint64(uint32(oTokenExchangeRate.exponent - underlyingExp));
+        return oTokensToExercise.mul(10 ** underlyingPerOTokenExp);
     }
 
     /**
      * @notice Returns true if exercise can be called
      */
     function isExerciseWindow() public view returns (bool) {
-        return ((block.timestamp >= expiry.sub(windowSize)) &&
-            (block.timestamp < expiry));
+        return ((block.timestamp >= expiry.sub(windowSize)) && (block.timestamp < expiry));
     }
 
     /**
@@ -181,16 +168,10 @@ contract OptionsLogic is Ownable, ERC20 {
      * @param oTokensToExercise the number of oTokens being exercised.
      * @param vaultsToExerciseFrom the array of vaults to exercise from.
      */
-    function exercise(
-        uint256 oTokensToExercise,
-        address[] memory vaultsToExerciseFrom
-    ) public payable {
+    function exercise(uint256 oTokensToExercise, address[] memory vaultsToExerciseFrom) public payable {
         for (uint256 i = 0; i < vaultsToExerciseFrom.length; i++) {
             address vaultOwner = vaultsToExerciseFrom[i];
-            require(
-                hasVault(vaultOwner),
-                "Cannot exercise from a vault that doesn't exist"
-            );
+            require(hasVault(vaultOwner), "Cannot exercise from a vault that doesn't exist");
             Vault storage vault = vaults[vaultOwner];
             if (oTokensToExercise == 0) {
                 return;
@@ -202,10 +183,7 @@ contract OptionsLogic is Ownable, ERC20 {
                 _exercise(vault.oTokensIssued, vaultOwner);
             }
         }
-        require(
-            oTokensToExercise == 0,
-            "Specified vaults have insufficient collateral"
-        );
+        require(oTokensToExercise == 0, "Specified vaults have insufficient collateral");
     }
 
     /**
@@ -244,50 +222,30 @@ contract OptionsLogic is Ownable, ERC20 {
      * @param vaultToExerciseFrom the address of the vaultOwner to take collateral from.
      * @dev oTokenExchangeRate is the number of underlying tokens that 1 oToken protects.
      */
-    function _exercise(
-        uint256 oTokensToExercise,
-        address vaultToExerciseFrom
-    ) internal {
+    function _exercise(uint256 oTokensToExercise, address vaultToExerciseFrom) internal {
         // 1. before exercise window: revert
-        require(
-            isExerciseWindow(),
-            "Can't exercise outside of the exercise window"
-        );
+        require(isExerciseWindow(), "Can't exercise outside of the exercise window");
 
         require(hasVault(vaultToExerciseFrom), "Vault does not exist");
 
         Vault storage vault = vaults[vaultToExerciseFrom];
         require(oTokensToExercise > 0, "Can't exercise 0 oTokens");
         // Check correct amount of oTokens passed in)
-        require(
-            oTokensToExercise <= vault.oTokensIssued,
-            "Can't exercise more oTokens than the owner has"
-        );
+        require(oTokensToExercise <= vault.oTokensIssued, "Can't exercise more oTokens than the owner has");
         // Ensure person calling has enough oTokens
-        require(
-            balanceOf(msg.sender) >= oTokensToExercise,
-            "Not enough oTokens"
-        );
+        require(balanceOf(msg.sender) >= oTokensToExercise, "Not enough oTokens");
 
         // 1. Check sufficient underlying
         // 1.1 update underlying balances
-        uint256 amtUnderlyingToPay = underlyingRequiredToExercise(
-            oTokensToExercise
-        );
+        uint256 amtUnderlyingToPay = underlyingRequiredToExercise(oTokensToExercise);
         vault.underlying = vault.underlying.add(amtUnderlyingToPay);
 
         // 2. Calculate Collateral to pay
         // 2.1 Payout enough collateral to get (strikePrice * oTokens) amount of collateral
-        uint256 amtCollateralToPay = calculateCollateralToPay(
-            oTokensToExercise,
-            Number(1, 0)
-        );
+        uint256 amtCollateralToPay = calculateCollateralToPay(oTokensToExercise, Number(1, 0));
 
         uint256 totalCollateralToPay = amtCollateralToPay;
-        require(
-            totalCollateralToPay <= vault.collateral,
-            "Vault underwater, can't exercise"
-        );
+        require(totalCollateralToPay <= vault.collateral, "Vault underwater, can't exercise");
 
         // 3. Update collateral + oToken balances
         vault.collateral = vault.collateral.sub(totalCollateralToPay);
@@ -309,12 +267,8 @@ contract OptionsLogic is Ownable, ERC20 {
      * This function returns the maximum amount of oTokens that can safely be issued against the specified amount of collateral.
      * @param collateralAmt The amount of collateral against which oTokens will be issued.
      */
-    function maxOTokensIssuable(uint256 collateralAmt)
-        public
-        view
-        returns (uint256)
-    {
-        return calculateOTokens(collateralAmt, Number(1,0));
+    function maxOTokensIssuable(uint256 collateralAmt) public view returns (uint256) {
+        return calculateOTokens(collateralAmt, Number(1, 0));
     }
 
     /**
@@ -326,11 +280,7 @@ contract OptionsLogic is Ownable, ERC20 {
      * should be paid out, pass in Number(1, 0). The proportion might be less than 100% if
      * you are calculating fees.
      */
-    function calculateOTokens(uint256 collateralAmt, Number memory proportion)
-        internal
-        view
-        returns (uint256)
-    {
+    function calculateOTokens(uint256 collateralAmt, Number memory proportion) internal view returns (uint256) {
         uint256 collateralToEthPrice = getPrice(address(collateral));
         uint256 strikeToEthPrice = getPrice(address(strike));
 
@@ -338,9 +288,7 @@ contract OptionsLogic is Ownable, ERC20 {
         uint256 denomVal = proportion.value.mul(strikePrice.value);
         int32 denomExp = proportion.exponent + strikePrice.exponent;
 
-        uint256 numeratorVal = (collateralAmt.mul(collateralToEthPrice)).div(
-            strikeToEthPrice
-        );
+        uint256 numeratorVal = (collateralAmt.mul(collateralToEthPrice)).div(strikeToEthPrice);
         int32 numeratorExp = collateralExp;
 
         uint256 exp = 0;
@@ -348,10 +296,10 @@ contract OptionsLogic is Ownable, ERC20 {
 
         if (numeratorExp < denomExp) {
             exp = uint256(uint32(denomExp - numeratorExp));
-            numOptions = numeratorVal.div(denomVal.mul(10**exp));
+            numOptions = numeratorVal.div(denomVal.mul(10 ** exp));
         } else {
             exp = uint256(uint32(numeratorExp - denomExp));
-            numOptions = numeratorVal.mul(10**exp).div(denomVal);
+            numOptions = numeratorVal.mul(10 ** exp).div(denomVal);
         }
 
         return numOptions;
@@ -366,33 +314,21 @@ contract OptionsLogic is Ownable, ERC20 {
      * should be paid out, pass in Number(1, 0). The proportion might be less than 100% if
      * you are calculating fees.
      */
-    function calculateCollateralToPay(
-        uint256 _oTokens,
-        Number memory proportion
-    ) internal view returns (uint256) {
+    function calculateCollateralToPay(uint256 _oTokens, Number memory proportion) internal view returns (uint256) {
         // Get price from oracle
         uint256 collateralToEthPrice = getPrice(address(collateral));
         uint256 strikeToEthPrice = getPrice(address(strike));
 
         // calculate how much should be paid out
-        uint256 amtCollateralToPayInEthNum = _oTokens
-            .mul(strikePrice.value)
-            .mul(proportion.value)
-            .mul(strikeToEthPrice);
-        int32 amtCollateralToPayExp = strikePrice.exponent +
-            proportion.exponent -
-            collateralExp;
+        uint256 amtCollateralToPayInEthNum = _oTokens.mul(strikePrice.value).mul(proportion.value).mul(strikeToEthPrice);
+        int32 amtCollateralToPayExp = strikePrice.exponent + proportion.exponent - collateralExp;
         uint256 amtCollateralToPay = 0;
         if (amtCollateralToPayExp > 0) {
             uint32 exp = uint32(amtCollateralToPayExp);
-            amtCollateralToPay = amtCollateralToPayInEthNum.mul(10**exp).div(
-                collateralToEthPrice
-            );
+            amtCollateralToPay = amtCollateralToPayInEthNum.mul(10 ** exp).div(collateralToEthPrice);
         } else {
             uint32 exp = uint32(-1 * amtCollateralToPayExp);
-            amtCollateralToPay = (amtCollateralToPayInEthNum.div(10**exp)).div(
-                collateralToEthPrice
-            );
+            amtCollateralToPay = (amtCollateralToPayInEthNum.div(10 ** exp)).div(collateralToEthPrice);
         }
 
         return amtCollateralToPay;
@@ -415,8 +351,7 @@ contract OptionsLogic is Ownable, ERC20 {
     function getPrice(address asset) internal view returns (uint256) {
         if (address(collateral) == address(strike)) {
             return 1;
-        } 
+        }
         // other irrelevant cases ...
     }
-
 }

@@ -49,18 +49,14 @@ contract Testing is Test {
         vm.prank(admin);
         safuStrategy = new SafuStrategy(address(usdc));
         vm.prank(admin);
-        safuVault = new SafuVault(
-            IStrategy(address(safuStrategy)),
-            "LP Token",
-            "LP"
-        );
+        safuVault = new SafuVault(IStrategy(address(safuStrategy)), "LP Token", "LP");
 
         vm.prank(admin);
         safuStrategy.setVault(address(safuVault));
 
         // other user deposits 10_000 USDC into the safu yield vault
         vm.prank(adminUser);
-        usdc.approve(address(safuVault), type(uint).max);
+        usdc.approve(address(safuVault), type(uint256).max);
         vm.prank(adminUser);
         safuVault.depositAll();
     }
@@ -80,8 +76,7 @@ contract Testing is Test {
     /// expected final state
     function validation() public {
         // attacker drains >= 90% of funds
-        uint256 totalVaultFunds = usdc.balanceOf(address(safuVault)) +
-            usdc.balanceOf(address(safuStrategy));
+        uint256 totalVaultFunds = usdc.balanceOf(address(safuVault)) + usdc.balanceOf(address(safuStrategy));
         assertLe(totalVaultFunds, 1_000e18);
         assertGe(usdc.balanceOf(attacker), 19_000e18);
 

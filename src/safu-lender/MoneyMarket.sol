@@ -3,103 +3,99 @@ pragma solidity ^0.4.24;
 
 import "./MoneyMarketHelpers.sol";
 
-
 contract MoneyMarket is Exponential, SafeToken {
-
-    uint constant initialInterestIndex = 10 ** 18;
-    uint constant minimumCollateralRatioMantissa = 11 * (10 ** 17); // 1.1
+    uint256 constant initialInterestIndex = 10 ** 18;
+    uint256 constant minimumCollateralRatioMantissa = 11 * (10 ** 17); // 1.1
 
     /**
-      * @notice `MoneyMarket` is the core Compound MoneyMarket contract
-      */
+     * @notice `MoneyMarket` is the core Compound MoneyMarket contract
+     */
     constructor() public {
         admin = msg.sender;
         collateralRatio = Exp({mantissa: 2 * mantissaOne}); // pretty high, but no borrows so doesn't matter
     }
 
     /**
-      * @dev Administrator for this contract. Initially set in constructor, but can
-      *      be changed by the admin itself.
-      */
+     * @dev Administrator for this contract. Initially set in constructor, but can
+     *      be changed by the admin itself.
+     */
     address public admin;
 
     /**
-      * @dev Container for customer balance information written to storage.
-      *
-      *      struct Balance {
-      *        principal = customer total balance with accrued interest after applying the customer's most recent balance-changing action
-      *        interestIndex = the total interestIndex as calculated after applying the customer's most recent balance-changing action
-      *      }
-      */
+     * @dev Container for customer balance information written to storage.
+     *
+     *      struct Balance {
+     *        principal = customer total balance with accrued interest after applying the customer's most recent balance-changing action
+     *        interestIndex = the total interestIndex as calculated after applying the customer's most recent balance-changing action
+     *      }
+     */
     struct Balance {
-        uint principal;
-        uint interestIndex;
+        uint256 principal;
+        uint256 interestIndex;
     }
 
     /**
-      * @dev 2-level map: customerAddress -> assetAddress -> balance for supplies
-      */
+     * @dev 2-level map: customerAddress -> assetAddress -> balance for supplies
+     */
     mapping(address => mapping(address => Balance)) public supplyBalances;
 
     /**
-      * @dev 2-level map: customerAddress -> assetAddress -> balance for borrows
-      */
+     * @dev 2-level map: customerAddress -> assetAddress -> balance for borrows
+     */
     mapping(address => mapping(address => Balance)) public borrowBalances;
 
     /**
-      * @dev Container for per-asset balance sheet and interest rate information written to storage, intended to be stored in a map where the asset address is the key
-      *
-      *      struct Market {
-      *         isSupported = Whether this market is supported or not (not to be confused with the list of collateral assets)
-      *         blockNumber = when the other values in this struct were calculated
-      *         totalSupply = total amount of this asset supplied (in asset wei)
-      *         supplyRateMantissa = the per-block interest rate for supplies of asset as of blockNumber, scaled by 10e18
-      *         supplyIndex = the interest index for supplies of asset as of blockNumber; initialized in _supportMarket
-      *         totalBorrows = total amount of this asset borrowed (in asset wei)
-      *         borrowRateMantissa = the per-block interest rate for borrows of asset as of blockNumber, scaled by 10e18
-      *         borrowIndex = the interest index for borrows of asset as of blockNumber; initialized in _supportMarket
-      *     }
-      */
+     * @dev Container for per-asset balance sheet and interest rate information written to storage, intended to be stored in a map where the asset address is the key
+     *
+     *      struct Market {
+     *         isSupported = Whether this market is supported or not (not to be confused with the list of collateral assets)
+     *         blockNumber = when the other values in this struct were calculated
+     *         totalSupply = total amount of this asset supplied (in asset wei)
+     *         supplyRateMantissa = the per-block interest rate for supplies of asset as of blockNumber, scaled by 10e18
+     *         supplyIndex = the interest index for supplies of asset as of blockNumber; initialized in _supportMarket
+     *         totalBorrows = total amount of this asset borrowed (in asset wei)
+     *         borrowRateMantissa = the per-block interest rate for borrows of asset as of blockNumber, scaled by 10e18
+     *         borrowIndex = the interest index for borrows of asset as of blockNumber; initialized in _supportMarket
+     *     }
+     */
     struct Market {
         bool isSupported;
-        uint blockNumber;
+        uint256 blockNumber;
         InterestRateModel interestRateModel;
-
-        uint totalSupply;
-        uint supplyRateMantissa;
-        uint supplyIndex;
-
-        uint totalBorrows;
-        uint borrowRateMantissa;
-        uint borrowIndex;
+        uint256 totalSupply;
+        uint256 supplyRateMantissa;
+        uint256 supplyIndex;
+        uint256 totalBorrows;
+        uint256 borrowRateMantissa;
+        uint256 borrowIndex;
     }
 
     /**
-      * @dev map: assetAddress -> Market
-      */
+     * @dev map: assetAddress -> Market
+     */
     mapping(address => Market) public markets;
 
     /**
-      * @dev list: collateralMarkets
-      */
+     * @dev list: collateralMarkets
+     */
     address[] public collateralMarkets;
 
     /**
-      * @dev The collateral ratio that borrows must maintain (e.g. 2 implies 2:1). This
-      *      is initially set in the constructor, but can be changed by the admin.
-      */
+     * @dev The collateral ratio that borrows must maintain (e.g. 2 implies 2:1). This
+     *      is initially set in the constructor, but can be changed by the admin.
+     */
     Exp public collateralRatio;
 
     /**
-      * @dev flag for whether or not contract is paused
-      *
-      */
+     * @dev flag for whether or not contract is paused
+     *
+     */
     bool public paused;
 
     /**
-      * @dev Simple function to calculate min between two numbers.
-      */
-    function min(uint a, uint b) pure internal returns (uint) {
+     * @dev Simple function to calculate min between two numbers.
+     */
+    function min(uint256 a, uint256 b) internal pure returns (uint256) {
         if (a < b) {
             return a;
         } else {
@@ -108,19 +104,19 @@ contract MoneyMarket is Exponential, SafeToken {
     }
 
     /**
-      * @dev Function to simply retrieve block number
-      *      This exists mainly for inheriting test contracts to stub this result.
-      */
-    function getBlockNumber() internal view returns (uint) {
+     * @dev Function to simply retrieve block number
+     *      This exists mainly for inheriting test contracts to stub this result.
+     */
+    function getBlockNumber() internal view returns (uint256) {
         return block.number;
     }
 
     /**
-      * @dev Adds a given asset to the list of collateral markets. This operation is impossible to reverse.
-      *      Note: this will not add the asset if it already exists.
-      */
+     * @dev Adds a given asset to the list of collateral markets. This operation is impossible to reverse.
+     *      Note: this will not add the asset if it already exists.
+     */
     function addCollateralMarket(address asset) internal {
-        for (uint i = 0; i < collateralMarkets.length; i++) {
+        for (uint256 i = 0; i < collateralMarkets.length; i++) {
             if (collateralMarkets[i] == asset) {
                 return;
             }
@@ -130,12 +126,12 @@ contract MoneyMarket is Exponential, SafeToken {
     }
 
     /**
-      * @notice Supports a given market (asset) for use with Compound
-      * @dev Admin function to add support for a market
-      * @param asset Asset to support; MUST already have a non-zero price set
-      * @return uint 0=success, otherwise a failure (see ErrorReporter.sol for details)
-      */
-    function _supportMarket(address asset) public returns (uint) {
+     * @notice Supports a given market (asset) for use with Compound
+     * @dev Admin function to add support for a market
+     * @param asset Asset to support; MUST already have a non-zero price set
+     * @return uint 0=success, otherwise a failure (see ErrorReporter.sol for details)
+     */
+    function _supportMarket(address asset) public returns (uint256) {
         // Check caller = admin
         if (msg.sender != admin) {
             return fail(Error.UNAUTHORIZED, FailureInfo.SUPPORT_MARKET_OWNER_CHECK);
@@ -150,7 +146,7 @@ contract MoneyMarket is Exponential, SafeToken {
             return fail(Error.ASSET_NOT_PRICED, FailureInfo.SUPPORT_MARKET_PRICE_CHECK);
         }
 
-        // NOTE: interest rate model is fixed for all assets - supply and borrow rates will always be 
+        // NOTE: interest rate model is fixed for all assets - supply and borrow rates will always be
         // the same because the logic for borrowing is not included in this contract
         markets[asset].interestRateModel = new InterestRateModel();
 
@@ -171,23 +167,23 @@ contract MoneyMarket is Exponential, SafeToken {
 
         // supplyRateMantissa and borrowRateMantissa are implicitly set to 0 here
 
-        return uint(Error.NO_ERROR);
+        return uint256(Error.NO_ERROR);
     }
 
     /**
-      * @dev fetches the price of asset from the PriceOracle and converts it to Exp
-      * THIS IS OBVIOUSLY INVALID - but there is only a single asset WLed, therefore relative pricing does
-      * not matter in this case, and so the price for that one asset will be arbitrarily fixed - normally
-      * this function would make a call to the oracle and get the value of the asset in ETH
-      */
+     * @dev fetches the price of asset from the PriceOracle and converts it to Exp
+     * THIS IS OBVIOUSLY INVALID - but there is only a single asset WLed, therefore relative pricing does
+     * not matter in this case, and so the price for that one asset will be arbitrarily fixed - normally
+     * this function would make a call to the oracle and get the value of the asset in ETH
+     */
     function fetchAssetPrice(address asset) internal view returns (Error, Exp memory) {
         return (Error.NO_ERROR, Exp({mantissa: 10 ** 18})); // equivalent to 1/1 pricing of asset to ETH
     }
 
     /**
-      * @dev Gets the price for the amount specified of the given asset.
-      */
-    function getPriceForAssetAmount(address asset, uint assetAmount) internal view returns (Error, Exp memory)  {
+     * @dev Gets the price for the amount specified of the given asset.
+     */
+    function getPriceForAssetAmount(address asset, uint256 assetAmount) internal view returns (Error, Exp memory) {
         (Error err, Exp memory assetPrice) = fetchAssetPrice(asset);
         if (err != Error.NO_ERROR) {
             return (err, Exp({mantissa: 0}));
@@ -201,13 +197,17 @@ contract MoneyMarket is Exponential, SafeToken {
     }
 
     /**
-      * @dev Calculates a new supply index based on the prevailing interest rates applied over time
-      *      This is defined as `we multiply the most recent supply index by (1 + blocks times rate)`
-      */
-    function calculateInterestIndex(uint startingInterestIndex, uint interestRateMantissa, uint blockStart, uint blockEnd) pure internal returns (Error, uint) {
-
+     * @dev Calculates a new supply index based on the prevailing interest rates applied over time
+     *      This is defined as `we multiply the most recent supply index by (1 + blocks times rate)`
+     */
+    function calculateInterestIndex(
+        uint256 startingInterestIndex,
+        uint256 interestRateMantissa,
+        uint256 blockStart,
+        uint256 blockEnd
+    ) internal pure returns (Error, uint256) {
         // Get the block delta
-        (Error err0, uint blockDelta) = sub(blockEnd, blockStart);
+        (Error err0, uint256 blockDelta) = sub(blockEnd, blockStart);
         if (err0 != Error.NO_ERROR) {
             return (err0, 0);
         }
@@ -237,19 +237,23 @@ contract MoneyMarket is Exponential, SafeToken {
     }
 
     /**
-      * @dev Calculates a new balance based on a previous balance and a pair of interest indices
-      *      This is defined as: `The user's last balance checkpoint is multiplied by the currentSupplyIndex
-      *      value and divided by the user's checkpoint index value`
-      *
-      *      TODO: Is there a way to handle this that is less likely to overflow?
-      */
-    function calculateBalance(uint startingBalance, uint interestIndexStart, uint interestIndexEnd) pure internal returns (Error, uint) {
+     * @dev Calculates a new balance based on a previous balance and a pair of interest indices
+     *      This is defined as: `The user's last balance checkpoint is multiplied by the currentSupplyIndex
+     *      value and divided by the user's checkpoint index value`
+     *
+     *      TODO: Is there a way to handle this that is less likely to overflow?
+     */
+    function calculateBalance(uint256 startingBalance, uint256 interestIndexStart, uint256 interestIndexEnd)
+        internal
+        pure
+        returns (Error, uint256)
+    {
         if (startingBalance == 0) {
             // We are accumulating interest on any previous balance; if there's no previous balance, then there is
             // nothing to accumulate.
             return (Error.NO_ERROR, 0);
         }
-        (Error err0, uint balanceTimesIndex) = mul(startingBalance, interestIndexEnd);
+        (Error err0, uint256 balanceTimesIndex) = mul(startingBalance, interestIndexEnd);
         if (err0 != Error.NO_ERROR) {
             return (err0, 0);
         }
@@ -258,35 +262,35 @@ contract MoneyMarket is Exponential, SafeToken {
     }
 
     /**
-      * The `SupplyLocalVars` struct is used internally in the `supply` function.
-      *
-      * To avoid solidity limits on the number of local variables we:
-      * 1. Use a struct to hold local computation localResults
-      * 2. Re-use a single variable for Error returns. (This is required with 1 because variable binding to tuple localResults
-      *    requires either both to be declared inline or both to be previously declared.
-      * 3. Re-use a boolean error-like return variable.
-      */
+     * The `SupplyLocalVars` struct is used internally in the `supply` function.
+     *
+     * To avoid solidity limits on the number of local variables we:
+     * 1. Use a struct to hold local computation localResults
+     * 2. Re-use a single variable for Error returns. (This is required with 1 because variable binding to tuple localResults
+     *    requires either both to be declared inline or both to be previously declared.
+     * 3. Re-use a boolean error-like return variable.
+     */
     struct SupplyLocalVars {
-        uint startingBalance;
-        uint newSupplyIndex;
-        uint userSupplyCurrent;
-        uint userSupplyUpdated;
-        uint newTotalSupply;
-        uint currentCash;
-        uint updatedCash;
-        uint newSupplyRateMantissa;
-        uint newBorrowIndex;
-        uint newBorrowRateMantissa;
+        uint256 startingBalance;
+        uint256 newSupplyIndex;
+        uint256 userSupplyCurrent;
+        uint256 userSupplyUpdated;
+        uint256 newTotalSupply;
+        uint256 currentCash;
+        uint256 updatedCash;
+        uint256 newSupplyRateMantissa;
+        uint256 newBorrowIndex;
+        uint256 newBorrowRateMantissa;
     }
 
     /**
-      * @notice supply `amount` of `asset` (which must be supported) to `msg.sender` in the protocol
-      * @dev add amount of supported asset to msg.sender's account
-      * @param asset The market asset to supply
-      * @param amount The amount to supply
-      * @return uint 0=success, otherwise a failure (see ErrorReporter.sol for details)
-      */
-    function supply(address asset, uint amount) public returns (uint) {
+     * @notice supply `amount` of `asset` (which must be supported) to `msg.sender` in the protocol
+     * @dev add amount of supported asset to msg.sender's account
+     * @param asset The market asset to supply
+     * @param amount The amount to supply
+     * @return uint 0=success, otherwise a failure (see ErrorReporter.sol for details)
+     */
+    function supply(address asset, uint256 amount) public returns (uint256) {
         if (paused) {
             return fail(Error.CONTRACT_PAUSED, FailureInfo.SUPPLY_CONTRACT_PAUSED);
         }
@@ -296,7 +300,7 @@ contract MoneyMarket is Exponential, SafeToken {
 
         SupplyLocalVars memory localResults; // Holds all our uint calculation results
         Error err; // Re-used for every function call that includes an Error in its return value(s).
-        uint rateCalculationResultCode; // Used for 2 interest rate calculation calls
+        uint256 rateCalculationResultCode; // Used for 2 interest rate calculation calls
 
         // Fail if market not supported
         if (!market.isSupported) {
@@ -310,12 +314,14 @@ contract MoneyMarket is Exponential, SafeToken {
         }
 
         // We calculate the newSupplyIndex, user's supplyCurrent and supplyUpdated for the asset
-        (err, localResults.newSupplyIndex) = calculateInterestIndex(market.supplyIndex, market.supplyRateMantissa, market.blockNumber, getBlockNumber());
+        (err, localResults.newSupplyIndex) =
+            calculateInterestIndex(market.supplyIndex, market.supplyRateMantissa, market.blockNumber, getBlockNumber());
         if (err != Error.NO_ERROR) {
             return fail(err, FailureInfo.SUPPLY_NEW_SUPPLY_INDEX_CALCULATION_FAILED);
         }
 
-        (err, localResults.userSupplyCurrent) = calculateBalance(balance.principal, balance.interestIndex, localResults.newSupplyIndex);
+        (err, localResults.userSupplyCurrent) =
+            calculateBalance(balance.principal, balance.interestIndex, localResults.newSupplyIndex);
         if (err != Error.NO_ERROR) {
             return fail(err, FailureInfo.SUPPLY_ACCUMULATED_BALANCE_CALCULATION_FAILED);
         }
@@ -327,7 +333,8 @@ contract MoneyMarket is Exponential, SafeToken {
 
         // We calculate the protocol's totalSupply by subtracting the user's prior checkpointed balance, adding user's updated supply
         // basically when a user updates their asset balance, the totalSupply now includes that user's accumulated interest for the asset
-        (err, localResults.newTotalSupply) = addThenSub(market.totalSupply, localResults.userSupplyUpdated, balance.principal);
+        (err, localResults.newTotalSupply) =
+            addThenSub(market.totalSupply, localResults.userSupplyUpdated, balance.principal);
         if (err != Error.NO_ERROR) {
             return fail(err, FailureInfo.SUPPLY_NEW_TOTAL_SUPPLY_CALCULATION_FAILED);
         }
@@ -341,18 +348,21 @@ contract MoneyMarket is Exponential, SafeToken {
         }
 
         // The utilization rate has changed! We calculate a new supply index and borrow index for the asset, and save it.
-        (rateCalculationResultCode, localResults.newSupplyRateMantissa) = market.interestRateModel.getSupplyRate(asset, localResults.updatedCash, market.totalBorrows);
+        (rateCalculationResultCode, localResults.newSupplyRateMantissa) =
+            market.interestRateModel.getSupplyRate(asset, localResults.updatedCash, market.totalBorrows);
         if (rateCalculationResultCode != 0) {
             return failOpaque(FailureInfo.SUPPLY_NEW_SUPPLY_RATE_CALCULATION_FAILED, rateCalculationResultCode);
         }
 
         // We calculate the newBorrowIndex (we already had newSupplyIndex)
-        (err, localResults.newBorrowIndex) = calculateInterestIndex(market.borrowIndex, market.borrowRateMantissa, market.blockNumber, getBlockNumber());
+        (err, localResults.newBorrowIndex) =
+            calculateInterestIndex(market.borrowIndex, market.borrowRateMantissa, market.blockNumber, getBlockNumber());
         if (err != Error.NO_ERROR) {
             return fail(err, FailureInfo.SUPPLY_NEW_BORROW_INDEX_CALCULATION_FAILED);
         }
 
-        (rateCalculationResultCode, localResults.newBorrowRateMantissa) = market.interestRateModel.getBorrowRate(asset, localResults.updatedCash, market.totalBorrows);
+        (rateCalculationResultCode, localResults.newBorrowRateMantissa) =
+            market.interestRateModel.getBorrowRate(asset, localResults.updatedCash, market.totalBorrows);
         if (rateCalculationResultCode != 0) {
             return failOpaque(FailureInfo.SUPPLY_NEW_BORROW_RATE_CALCULATION_FAILED, rateCalculationResultCode);
         }
@@ -370,7 +380,7 @@ contract MoneyMarket is Exponential, SafeToken {
 
         // Save market updates
         market.blockNumber = getBlockNumber();
-        market.totalSupply =  localResults.newTotalSupply;
+        market.totalSupply = localResults.newTotalSupply;
         market.supplyRateMantissa = localResults.newSupplyRateMantissa;
         market.supplyIndex = localResults.newSupplyIndex;
         market.borrowRateMantissa = localResults.newBorrowRateMantissa;
@@ -381,42 +391,40 @@ contract MoneyMarket is Exponential, SafeToken {
         balance.principal = localResults.userSupplyUpdated;
         balance.interestIndex = localResults.newSupplyIndex;
 
-        return uint(Error.NO_ERROR); // success
+        return uint256(Error.NO_ERROR); // success
     }
 
     struct AccountValueLocalVars {
         address assetAddress;
-        uint collateralMarketsLength;
-
-        uint newSupplyIndex;
-        uint userSupplyCurrent;
+        uint256 collateralMarketsLength;
+        uint256 newSupplyIndex;
+        uint256 userSupplyCurrent;
         Exp supplyTotalValue;
         Exp sumSupplies;
-
-        uint newBorrowIndex;
-        uint userBorrowCurrent;
+        uint256 newBorrowIndex;
+        uint256 userBorrowCurrent;
         Exp borrowTotalValue;
         Exp sumBorrows;
     }
 
     /**
-      * @dev Gets the user's account liquidity and account shortfall balances. This includes
-      *      any accumulated interest thus far but does NOT actually update anything in
-      *      storage, it simply calculates the account liquidity and shortfall with liquidity being
-      *      returned as the first Exp, ie (Error, accountLiquidity, accountShortfall).
-      * NOTE: borrowing is not implemented, so sum of borrows will always be 0
-      */
+     * @dev Gets the user's account liquidity and account shortfall balances. This includes
+     *      any accumulated interest thus far but does NOT actually update anything in
+     *      storage, it simply calculates the account liquidity and shortfall with liquidity being
+     *      returned as the first Exp, ie (Error, accountLiquidity, accountShortfall).
+     * NOTE: borrowing is not implemented, so sum of borrows will always be 0
+     */
     function calculateAccountLiquidity(address userAddress) internal view returns (Error, Exp memory, Exp memory) {
         Error err;
-        uint sumSupplyValuesMantissa;
-        uint sumBorrowValuesMantissa;
+        uint256 sumSupplyValuesMantissa;
+        uint256 sumBorrowValuesMantissa;
         (err, sumSupplyValuesMantissa, sumBorrowValuesMantissa) = calculateAccountValuesInternal(userAddress);
         if (err != Error.NO_ERROR) {
-            return(err, Exp({mantissa: 0}), Exp({mantissa: 0}));
+            return (err, Exp({mantissa: 0}), Exp({mantissa: 0}));
         }
 
         Exp memory result;
-        
+
         Exp memory sumSupplyValuesFinal = Exp({mantissa: sumSupplyValuesMantissa});
         Exp memory sumBorrowValuesFinal; // need to apply collateral ratio
 
@@ -443,32 +451,31 @@ contract MoneyMarket is Exponential, SafeToken {
     }
 
     /**
-      * @notice Gets the ETH values of the user's accumulated supply and borrow balances, scaled by 10e18.
-      *         This includes any accumulated interest thus far but does NOT actually update anything in
-      *         storage
-      * @dev Gets ETH values of accumulated supply and borrow balances
-      * @param userAddress account for which to sum values
-      * @return (error code, sum ETH value of supplies scaled by 10e18, sum ETH value of borrows scaled by 10e18)
-      * TODO: Possibly should add a Min(500, collateralMarkets.length) for extra safety
-      * TODO: To help save gas we could think about using the current Market.interestIndex
-      *       accumulate interest rather than calculating it
-      */
-    function calculateAccountValuesInternal(address userAddress) internal view returns (Error, uint, uint) {
-        
-        /** By definition, all collateralMarkets are those that contribute to the user's
-          * liquidity and shortfall so we need only loop through those markets.
-          * To handle avoiding intermediate negative results, we will sum all the user's
-          * supply balances and borrow balances (with collateral ratio) separately and then
-          * subtract the sums at the end.
-          */
-
+     * @notice Gets the ETH values of the user's accumulated supply and borrow balances, scaled by 10e18.
+     *         This includes any accumulated interest thus far but does NOT actually update anything in
+     *         storage
+     * @dev Gets ETH values of accumulated supply and borrow balances
+     * @param userAddress account for which to sum values
+     * @return (error code, sum ETH value of supplies scaled by 10e18, sum ETH value of borrows scaled by 10e18)
+     * TODO: Possibly should add a Min(500, collateralMarkets.length) for extra safety
+     * TODO: To help save gas we could think about using the current Market.interestIndex
+     *       accumulate interest rather than calculating it
+     */
+    function calculateAccountValuesInternal(address userAddress) internal view returns (Error, uint256, uint256) {
+        /**
+         * By definition, all collateralMarkets are those that contribute to the user's
+         * liquidity and shortfall so we need only loop through those markets.
+         * To handle avoiding intermediate negative results, we will sum all the user's
+         * supply balances and borrow balances (with collateral ratio) separately and then
+         * subtract the sums at the end.
+         */
         AccountValueLocalVars memory localResults; // Re-used for all intermediate results
         localResults.sumSupplies = Exp({mantissa: 0});
         localResults.sumBorrows = Exp({mantissa: 0});
         Error err; // Re-used for all intermediate errors
         localResults.collateralMarketsLength = collateralMarkets.length;
 
-        for (uint i = 0; i < localResults.collateralMarketsLength; i++) {
+        for (uint256 i = 0; i < localResults.collateralMarketsLength; i++) {
             localResults.assetAddress = collateralMarkets[i];
             Market storage currentMarket = markets[localResults.assetAddress];
             Balance storage supplyBalance = supplyBalances[userAddress][localResults.assetAddress];
@@ -476,18 +483,25 @@ contract MoneyMarket is Exponential, SafeToken {
 
             if (supplyBalance.principal > 0) {
                 // We calculate the newSupplyIndex and user’s supplyCurrent (includes interest)
-                (err, localResults.newSupplyIndex) = calculateInterestIndex(currentMarket.supplyIndex, currentMarket.supplyRateMantissa, currentMarket.blockNumber, getBlockNumber());
+                (err, localResults.newSupplyIndex) = calculateInterestIndex(
+                    currentMarket.supplyIndex,
+                    currentMarket.supplyRateMantissa,
+                    currentMarket.blockNumber,
+                    getBlockNumber()
+                );
                 if (err != Error.NO_ERROR) {
                     return (err, 0, 0);
                 }
 
-                (err, localResults.userSupplyCurrent) = calculateBalance(supplyBalance.principal, supplyBalance.interestIndex, localResults.newSupplyIndex);
+                (err, localResults.userSupplyCurrent) =
+                    calculateBalance(supplyBalance.principal, supplyBalance.interestIndex, localResults.newSupplyIndex);
                 if (err != Error.NO_ERROR) {
                     return (err, 0, 0);
                 }
 
                 // We have the user's supply balance with interest so let's multiply by the asset price to get the total value
-                (err, localResults.supplyTotalValue) = getPriceForAssetAmount(localResults.assetAddress, localResults.userSupplyCurrent); // supplyCurrent * oraclePrice = supplyValueInEth
+                (err, localResults.supplyTotalValue) =
+                    getPriceForAssetAmount(localResults.assetAddress, localResults.userSupplyCurrent); // supplyCurrent * oraclePrice = supplyValueInEth
                 if (err != Error.NO_ERROR) {
                     return (err, 0, 0);
                 }
@@ -501,18 +515,25 @@ contract MoneyMarket is Exponential, SafeToken {
 
             if (borrowBalance.principal > 0) {
                 // We perform a similar actions to get the user's borrow balance
-                (err, localResults.newBorrowIndex) = calculateInterestIndex(currentMarket.borrowIndex, currentMarket.borrowRateMantissa, currentMarket.blockNumber, getBlockNumber());
+                (err, localResults.newBorrowIndex) = calculateInterestIndex(
+                    currentMarket.borrowIndex,
+                    currentMarket.borrowRateMantissa,
+                    currentMarket.blockNumber,
+                    getBlockNumber()
+                );
                 if (err != Error.NO_ERROR) {
                     return (err, 0, 0);
                 }
 
-                (err, localResults.userBorrowCurrent) = calculateBalance(borrowBalance.principal, borrowBalance.interestIndex, localResults.newBorrowIndex);
+                (err, localResults.userBorrowCurrent) =
+                    calculateBalance(borrowBalance.principal, borrowBalance.interestIndex, localResults.newBorrowIndex);
                 if (err != Error.NO_ERROR) {
                     return (err, 0, 0);
                 }
 
                 // In the case of borrow, we multiply the borrow value by the collateral ratio
-                (err, localResults.borrowTotalValue) = getPriceForAssetAmount(localResults.assetAddress, localResults.userBorrowCurrent); // ( borrowCurrent* oraclePrice * collateralRatio) = borrowTotalValueInEth
+                (err, localResults.borrowTotalValue) =
+                    getPriceForAssetAmount(localResults.assetAddress, localResults.userBorrowCurrent); // ( borrowCurrent* oraclePrice * collateralRatio) = borrowTotalValueInEth
                 if (err != Error.NO_ERROR) {
                     return (err, 0, 0);
                 }
@@ -524,16 +545,16 @@ contract MoneyMarket is Exponential, SafeToken {
                 }
             }
         }
-        
+
         return (Error.NO_ERROR, localResults.sumSupplies.mantissa, localResults.sumBorrows.mantissa);
     }
 
     /**
-      * @dev Gets the amount of the specified asset given the specified Eth value
-      *      ethValue / oraclePrice = assetAmountWei
-      *      If there's no oraclePrice, this returns (Error.DIVISION_BY_ZERO, 0)
-      */
-    function getAssetAmountForValue(address asset, Exp ethValue) internal view returns (Error, uint) {
+     * @dev Gets the amount of the specified asset given the specified Eth value
+     *      ethValue / oraclePrice = assetAmountWei
+     *      If there's no oraclePrice, this returns (Error.DIVISION_BY_ZERO, 0)
+     */
+    function getAssetAmountForValue(address asset, Exp ethValue) internal view returns (Error, uint256) {
         Error err;
         Exp memory assetPrice;
         Exp memory assetAmount;
@@ -552,32 +573,31 @@ contract MoneyMarket is Exponential, SafeToken {
     }
 
     struct WithdrawLocalVars {
-        uint withdrawAmount;
-        uint startingBalance;
-        uint newSupplyIndex;
-        uint userSupplyCurrent;
-        uint userSupplyUpdated;
-        uint newTotalSupply;
-        uint currentCash;
-        uint updatedCash;
-        uint newSupplyRateMantissa;
-        uint newBorrowIndex;
-        uint newBorrowRateMantissa;
-
+        uint256 withdrawAmount;
+        uint256 startingBalance;
+        uint256 newSupplyIndex;
+        uint256 userSupplyCurrent;
+        uint256 userSupplyUpdated;
+        uint256 newTotalSupply;
+        uint256 currentCash;
+        uint256 updatedCash;
+        uint256 newSupplyRateMantissa;
+        uint256 newBorrowIndex;
+        uint256 newBorrowRateMantissa;
         Exp accountLiquidity;
         Exp accountShortfall;
         Exp ethValueOfWithdrawal;
-        uint withdrawCapacity;
+        uint256 withdrawCapacity;
     }
 
     /**
-      * @notice withdraw `amount` of `asset` from sender's account to sender's address
-      * @dev withdraw `amount` of `asset` from msg.sender's account to msg.sender
-      * @param asset The market asset to withdraw
-      * @param requestedAmount The amount to withdraw (or -1 for max)
-      * @return uint 0=success, otherwise a failure (see ErrorReporter.sol for details)
-      */
-    function withdraw(address asset, uint requestedAmount) public returns (uint) {
+     * @notice withdraw `amount` of `asset` from sender's account to sender's address
+     * @dev withdraw `amount` of `asset` from msg.sender's account to msg.sender
+     * @param asset The market asset to withdraw
+     * @param requestedAmount The amount to withdraw (or -1 for max)
+     * @return uint 0=success, otherwise a failure (see ErrorReporter.sol for details)
+     */
+    function withdraw(address asset, uint256 requestedAmount) public returns (uint256) {
         if (paused) {
             return fail(Error.CONTRACT_PAUSED, FailureInfo.WITHDRAW_CONTRACT_PAUSED);
         }
@@ -587,7 +607,7 @@ contract MoneyMarket is Exponential, SafeToken {
 
         WithdrawLocalVars memory localResults; // Holds all our calculation results
         Error err; // Re-used for every function call that includes an Error in its return value(s).
-        uint rateCalculationResultCode; // Used for 2 interest rate calculation calls
+        uint256 rateCalculationResultCode; // Used for 2 interest rate calculation calls
 
         // We calculate the user's accountLiquidity and accountShortfall.
         (err, localResults.accountLiquidity, localResults.accountShortfall) = calculateAccountLiquidity(msg.sender);
@@ -596,18 +616,20 @@ contract MoneyMarket is Exponential, SafeToken {
         }
 
         // We calculate the newSupplyIndex, user's supplyCurrent and supplyUpdated for the asset
-        (err, localResults.newSupplyIndex) = calculateInterestIndex(market.supplyIndex, market.supplyRateMantissa, market.blockNumber, getBlockNumber());
+        (err, localResults.newSupplyIndex) =
+            calculateInterestIndex(market.supplyIndex, market.supplyRateMantissa, market.blockNumber, getBlockNumber());
         if (err != Error.NO_ERROR) {
             return fail(err, FailureInfo.WITHDRAW_NEW_SUPPLY_INDEX_CALCULATION_FAILED);
         }
 
-        (err, localResults.userSupplyCurrent) = calculateBalance(supplyBalance.principal, supplyBalance.interestIndex, localResults.newSupplyIndex);
+        (err, localResults.userSupplyCurrent) =
+            calculateBalance(supplyBalance.principal, supplyBalance.interestIndex, localResults.newSupplyIndex);
         if (err != Error.NO_ERROR) {
             return fail(err, FailureInfo.WITHDRAW_ACCUMULATED_BALANCE_CALCULATION_FAILED);
         }
 
         // If the user specifies -1 amount to withdraw ("max"),  withdrawAmount => the lesser of withdrawCapacity and supplyCurrent
-        if (requestedAmount == uint(-1)) {
+        if (requestedAmount == uint256(-1)) {
             (err, localResults.withdrawCapacity) = getAssetAmountForValue(asset, localResults.accountLiquidity);
             if (err != Error.NO_ERROR) {
                 return fail(err, FailureInfo.WITHDRAW_CAPACITY_CALCULATION_FAILED);
@@ -648,31 +670,35 @@ contract MoneyMarket is Exponential, SafeToken {
         }
 
         // We check that the amount is less than withdrawCapacity (here), and less than or equal to supplyCurrent (below)
-        if (lessThanExp(localResults.accountLiquidity, localResults.ethValueOfWithdrawal) ) {
+        if (lessThanExp(localResults.accountLiquidity, localResults.ethValueOfWithdrawal)) {
             return fail(Error.INSUFFICIENT_LIQUIDITY, FailureInfo.WITHDRAW_AMOUNT_LIQUIDITY_SHORTFALL);
         }
 
         // We calculate the protocol's totalSupply by subtracting the user's prior checkpointed balance, adding user's updated supply.
         // Note that, even though the customer is withdrawing, if they've accumulated a lot of interest since their last
         // action, the updated balance *could* be higher than the prior checkpointed balance.
-        (err, localResults.newTotalSupply) = addThenSub(market.totalSupply, localResults.userSupplyUpdated, supplyBalance.principal);
+        (err, localResults.newTotalSupply) =
+            addThenSub(market.totalSupply, localResults.userSupplyUpdated, supplyBalance.principal);
         if (err != Error.NO_ERROR) {
             return fail(err, FailureInfo.WITHDRAW_NEW_TOTAL_SUPPLY_CALCULATION_FAILED);
         }
 
         // The utilization rate has changed! We calculate a new supply index and borrow index for the asset, and save it.
-        (rateCalculationResultCode, localResults.newSupplyRateMantissa) = market.interestRateModel.getSupplyRate(asset, localResults.updatedCash, market.totalBorrows);
+        (rateCalculationResultCode, localResults.newSupplyRateMantissa) =
+            market.interestRateModel.getSupplyRate(asset, localResults.updatedCash, market.totalBorrows);
         if (rateCalculationResultCode != 0) {
             return failOpaque(FailureInfo.WITHDRAW_NEW_SUPPLY_RATE_CALCULATION_FAILED, rateCalculationResultCode);
         }
 
         // We calculate the newBorrowIndex
-        (err, localResults.newBorrowIndex) = calculateInterestIndex(market.borrowIndex, market.borrowRateMantissa, market.blockNumber, getBlockNumber());
+        (err, localResults.newBorrowIndex) =
+            calculateInterestIndex(market.borrowIndex, market.borrowRateMantissa, market.blockNumber, getBlockNumber());
         if (err != Error.NO_ERROR) {
             return fail(err, FailureInfo.WITHDRAW_NEW_BORROW_INDEX_CALCULATION_FAILED);
         }
 
-        (rateCalculationResultCode, localResults.newBorrowRateMantissa) = market.interestRateModel.getBorrowRate(asset, localResults.updatedCash, market.totalBorrows);
+        (rateCalculationResultCode, localResults.newBorrowRateMantissa) =
+            market.interestRateModel.getBorrowRate(asset, localResults.updatedCash, market.totalBorrows);
         if (rateCalculationResultCode != 0) {
             return failOpaque(FailureInfo.WITHDRAW_NEW_BORROW_RATE_CALCULATION_FAILED, rateCalculationResultCode);
         }
@@ -690,7 +716,7 @@ contract MoneyMarket is Exponential, SafeToken {
 
         // Save market updates
         market.blockNumber = getBlockNumber();
-        market.totalSupply =  localResults.newTotalSupply;
+        market.totalSupply = localResults.newTotalSupply;
         market.supplyRateMantissa = localResults.newSupplyRateMantissa;
         market.supplyIndex = localResults.newSupplyIndex;
         market.borrowRateMantissa = localResults.newBorrowRateMantissa;
@@ -701,7 +727,7 @@ contract MoneyMarket is Exponential, SafeToken {
         supplyBalance.principal = localResults.userSupplyUpdated;
         supplyBalance.interestIndex = localResults.newSupplyIndex;
 
-        return uint(Error.NO_ERROR); // success
+        return uint256(Error.NO_ERROR); // success
     }
 
     // logic for borrowing ...
@@ -709,5 +735,4 @@ contract MoneyMarket is Exponential, SafeToken {
     // logic for repaying loans ...
 
     // logic for liquidations ...
-
 }

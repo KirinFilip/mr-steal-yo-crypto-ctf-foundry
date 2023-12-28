@@ -8,14 +8,12 @@ import "@openzeppelin/contracts/utils/introspection/ERC165.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 import "@openzeppelin/contracts/utils/Context.sol";
 
-
 /// @dev ERC1155 token representation for storing all game assets
 /// @dev differs from base ERC1155 contract in that each user can only store
 /// @dev a single unique NFT id per token ID, & transfers can only be made to
 /// @dev users who do not already own an instance of that token ID
 /// @dev NFT id is stored to allow for easy wrapping/unwrapping of assets
 contract AssetHolder is Context, ERC165, IERC1155, IERC1155MetadataURI {
-
     using Address for address;
 
     // mapping from token ID to account NFT id owned
@@ -38,10 +36,8 @@ contract AssetHolder is Context, ERC165, IERC1155, IERC1155MetadataURI {
 
     /// @dev See {IERC165-supportsInterface}
     function supportsInterface(bytes4 interfaceId) public view virtual override(ERC165, IERC165) returns (bool) {
-        return
-            interfaceId == type(IERC1155).interfaceId ||
-            interfaceId == type(IERC1155MetadataURI).interfaceId ||
-            super.supportsInterface(interfaceId);
+        return interfaceId == type(IERC1155).interfaceId || interfaceId == type(IERC1155MetadataURI).interfaceId
+            || super.supportsInterface(interfaceId);
     }
 
     /// @dev returns the same URI for *all* token types
@@ -89,23 +85,21 @@ contract AssetHolder is Context, ERC165, IERC1155, IERC1155MetadataURI {
     function isApprovedForAll(address account, address operator) public view virtual override returns (bool) {
         return _operatorApprovals[account][operator];
     }
- 
+
     /// @dev single transfer of an NFT id for a specific token ID
     /// @dev `amount` must be 1, `data` is the NFT id to transfer
-    function safeTransferFrom(
-        address from,
-        address to,
-        uint256 id,
-        uint256 amount,
-        bytes memory data
-    ) public virtual override {
+    function safeTransferFrom(address from, address to, uint256 id, uint256 amount, bytes memory data)
+        public
+        virtual
+        override
+    {
         require(
             from == _msgSender() || isApprovedForAll(from, _msgSender()),
             "ERC1155: caller is not token owner nor approved"
         );
         _safeTransferFrom(from, to, id, amount, data);
     }
-    
+
     /// @dev batch transfer of a set of NFT ids for a set of token IDs
     /// @dev `amounts` must be 1s, `data` is array of NFT ids to transfer
     function safeBatchTransferFrom(
@@ -124,13 +118,10 @@ contract AssetHolder is Context, ERC165, IERC1155, IERC1155MetadataURI {
 
     /// @dev transfers single NFT id from `from` to `to` for a select token type `id`
     /// @dev transfers only allowed to accounts which don't already own same token type `id`
-    function _safeTransferFrom(
-        address from,
-        address to,
-        uint256 id,
-        uint256 amount,
-        bytes memory data
-    ) internal virtual {
+    function _safeTransferFrom(address from, address to, uint256 id, uint256 amount, bytes memory data)
+        internal
+        virtual
+    {
         require(to != address(0), "ERC1155: transfer to the zero address");
         require(amount == 1, "ERC1155: invalid transfer amount"); // ignored
 
@@ -140,7 +131,7 @@ contract AssetHolder is Context, ERC165, IERC1155, IERC1155MetadataURI {
 
         _beforeTokenTransfer(operator, from, to, ids, amounts, data);
 
-        uint256 nftId = abi.decode(data,(uint256));
+        uint256 nftId = abi.decode(data, (uint256));
 
         require(_ownsAny[id][from], "ERC1155: user doesn't own token ID");
         require(_idOwned[id][from] == nftId, "ERC1155: user doesn't own NFT id");
@@ -173,7 +164,7 @@ contract AssetHolder is Context, ERC165, IERC1155, IERC1155MetadataURI {
 
         _beforeTokenTransfer(operator, from, to, ids, amounts, data);
 
-        uint256[] memory nftIds = abi.decode(data,(uint256[]));
+        uint256[] memory nftIds = abi.decode(data, (uint256[]));
 
         for (uint256 i = 0; i < ids.length; ++i) {
             uint256 id = ids[i];
@@ -187,7 +178,7 @@ contract AssetHolder is Context, ERC165, IERC1155, IERC1155MetadataURI {
 
             _ownsAny[id][from] = false;
             _ownsAny[id][to] = true;
-            _idOwned[id][to] = nftId;          
+            _idOwned[id][to] = nftId;
         }
 
         emit TransferBatch(operator, from, to, ids, amounts);
@@ -204,12 +195,7 @@ contract AssetHolder is Context, ERC165, IERC1155, IERC1155MetadataURI {
 
     /// @dev mints NFT id to `to` for token type `id`
     /// @param data Stores NFT id to mint to `to`
-    function _mint(
-        address to,
-        uint256 id,
-        uint256 amount,
-        bytes memory data
-    ) internal virtual {
+    function _mint(address to, uint256 id, uint256 amount, bytes memory data) internal virtual {
         require(to != address(0), "ERC1155: mint to the zero address");
         require(amount == 1, "ERC1155: invalid transfer amount"); // ignored
 
@@ -219,7 +205,7 @@ contract AssetHolder is Context, ERC165, IERC1155, IERC1155MetadataURI {
 
         _beforeTokenTransfer(operator, address(0), to, ids, amounts, data);
 
-        uint256 nftId = abi.decode(data,(uint256));
+        uint256 nftId = abi.decode(data, (uint256));
 
         require(!_ownsAny[id][to], "ERC1155: receiver already has token");
 
@@ -235,12 +221,10 @@ contract AssetHolder is Context, ERC165, IERC1155, IERC1155MetadataURI {
 
     /// @dev mints batch of NFT ids to `to` for token types `ids`
     /// @param data Stores NFT ids to mint to `to`
-    function _mintBatch(
-        address to,
-        uint256[] memory ids,
-        uint256[] memory amounts,
-        bytes memory data
-    ) internal virtual {
+    function _mintBatch(address to, uint256[] memory ids, uint256[] memory amounts, bytes memory data)
+        internal
+        virtual
+    {
         require(to != address(0), "ERC1155: mint to the zero address");
         require(ids.length == amounts.length, "ERC1155: ids and amounts length mismatch");
 
@@ -248,7 +232,7 @@ contract AssetHolder is Context, ERC165, IERC1155, IERC1155MetadataURI {
 
         _beforeTokenTransfer(operator, address(0), to, ids, amounts, data);
 
-        uint256[] memory nftIds = abi.decode(data,(uint256[]));
+        uint256[] memory nftIds = abi.decode(data, (uint256[]));
 
         for (uint256 i = 0; i < ids.length; i++) {
             uint256 id = ids[i];
@@ -268,11 +252,7 @@ contract AssetHolder is Context, ERC165, IERC1155, IERC1155MetadataURI {
     }
 
     /// @dev destroys token type `id` from `from`
-    function _burn(
-        address from,
-        uint256 id,
-        uint256 amount
-    ) internal virtual {
+    function _burn(address from, uint256 id, uint256 amount) internal virtual {
         require(from != address(0), "ERC1155: burn from the zero address");
         require(amount == 1, "ERC1155: invalid transfer amount"); // ignored
 
@@ -291,11 +271,7 @@ contract AssetHolder is Context, ERC165, IERC1155, IERC1155MetadataURI {
     }
 
     /// @dev destroys token types `ids` from `from`
-    function _burnBatch(
-        address from,
-        uint256[] memory ids,
-        uint256[] memory amounts
-    ) internal virtual {
+    function _burnBatch(address from, uint256[] memory ids, uint256[] memory amounts) internal virtual {
         require(from != address(0), "ERC1155: burn from the zero address");
         require(ids.length == amounts.length, "ERC1155: ids and amounts length mismatch");
 
@@ -318,11 +294,7 @@ contract AssetHolder is Context, ERC165, IERC1155, IERC1155MetadataURI {
     }
 
     /// @dev approves `operator` to operate on all of `owner` tokens
-    function _setApprovalForAll(
-        address owner,
-        address operator,
-        bool approved
-    ) internal virtual {
+    function _setApprovalForAll(address owner, address operator, bool approved) internal virtual {
         require(owner != operator, "ERC1155: setting approval status for self");
         _operatorApprovals[owner][operator] = approved;
         emit ApprovalForAll(owner, operator, approved);
@@ -398,5 +370,4 @@ contract AssetHolder is Context, ERC165, IERC1155, IERC1155MetadataURI {
 
         return array;
     }
-
 }

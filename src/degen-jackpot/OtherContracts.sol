@@ -5,9 +5,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "./OtherInterfaces.sol";
 
-
 contract RevestAccessControl is Ownable {
-
     IAddressRegistry internal addressesProvider;
 
     constructor(address provider) Ownable() {
@@ -17,9 +15,8 @@ contract RevestAccessControl is Ownable {
     modifier onlyRevest() {
         require(_msgSender() != address(0), "E004");
         require(
-                _msgSender() == addressesProvider.getLockManager() ||
-                _msgSender() == addressesProvider.getTokenVault() ||
-                _msgSender() == addressesProvider.getRevest(),
+            _msgSender() == addressesProvider.getLockManager() || _msgSender() == addressesProvider.getTokenVault()
+                || _msgSender() == addressesProvider.getRevest(),
             "E016"
         );
         _;
@@ -60,16 +57,14 @@ contract RevestAccessControl is Ownable {
     function getFNFTHandler() internal view returns (IFNFTHandler) {
         return IFNFTHandler(addressesProvider.getRevestFNFT());
     }
-
 }
 
 contract RevestReentrancyGuard is ReentrancyGuard {
-
     // Used to avoid reentrancy
-    uint private constant MAX_INT = 0xFFFFFFFFFFFFFFFF;
-    uint private currentId = MAX_INT;
+    uint256 private constant MAX_INT = 0xFFFFFFFFFFFFFFFF;
+    uint256 private currentId = MAX_INT;
 
-    modifier revestNonReentrant(uint fnftId) {
+    modifier revestNonReentrant(uint256 fnftId) {
         // On the first call to nonReentrant, _notEntered will be true
         require(fnftId != currentId, "E052");
 
@@ -80,11 +75,9 @@ contract RevestReentrancyGuard is ReentrancyGuard {
 
         currentId = MAX_INT;
     }
-
 }
 
 contract AddressRegistry is IAddressRegistry, Ownable {
-
     address private lockManager;
     address private tokenVault;
     address private revestFNFT;
@@ -127,5 +120,4 @@ contract AddressRegistry is IAddressRegistry, Ownable {
     function setRevest(address revest) external override onlyOwner {
         revestAddr = revest;
     }
-
 }

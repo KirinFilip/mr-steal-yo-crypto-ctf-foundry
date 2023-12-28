@@ -6,7 +6,6 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
-
 interface IMuny {
     function mint(address user, uint256 amount) external;
     function balanceOf(address account) external view returns (uint256);
@@ -15,7 +14,6 @@ interface IMuny {
 
 // MasterChef is the master of Muny. He can make Muny and he is a fair guy.
 contract MasterChef is Ownable {
-
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
 
@@ -23,17 +21,17 @@ contract MasterChef is Ownable {
     struct UserInfo {
         uint256 amount; // How many LP tokens the user has provided.
         uint256 rewardDebt; // Reward debt. See explanation below.
-        //
-        // We do some fancy math here. Basically, any point in time, the amount of MUNYs
-        // entitled to a user but is pending to be distributed is:
-        //
-        //   pending reward = (user.amount * pool.accMunyPerShare) - user.rewardDebt
-        //
-        // Whenever a user deposits or withdraws LP tokens to a pool. Here's what happens:
-        //   1. The pool's `accMunyPerShare` (and `lastRewardBlock`) gets updated.
-        //   2. User receives the pending reward sent to his/her address.
-        //   3. User's `amount` gets updated.
-        //   4. User's `rewardDebt` gets updated.
+            //
+            // We do some fancy math here. Basically, any point in time, the amount of MUNYs
+            // entitled to a user but is pending to be distributed is:
+            //
+            //   pending reward = (user.amount * pool.accMunyPerShare) - user.rewardDebt
+            //
+            // Whenever a user deposits or withdraws LP tokens to a pool. Here's what happens:
+            //   1. The pool's `accMunyPerShare` (and `lastRewardBlock`) gets updated.
+            //   2. User receives the pending reward sent to his/her address.
+            //   3. User's `amount` gets updated.
+            //   4. User's `rewardDebt` gets updated.
     }
 
     // Info of each pool.
@@ -65,19 +63,11 @@ contract MasterChef is Ownable {
 
     event Deposit(address indexed user, uint256 indexed pid, uint256 amount);
     event Withdraw(address indexed user, uint256 indexed pid, uint256 amount);
-    event EmergencyWithdraw(
-        address indexed user,
-        uint256 indexed pid,
-        uint256 amount
-    );
+    event EmergencyWithdraw(address indexed user, uint256 indexed pid, uint256 amount);
 
-    constructor(
-        IMuny _muny,
-        address _devaddr,
-        uint256 _munyPerBlock,
-        uint256 _startBlock,
-        uint256 _bonusEndBlock
-    ) public {
+    constructor(IMuny _muny, address _devaddr, uint256 _munyPerBlock, uint256 _startBlock, uint256 _bonusEndBlock)
+        public
+    {
         muny = _muny;
         devaddr = _devaddr;
         munyPerBlock = _munyPerBlock;
@@ -91,66 +81,39 @@ contract MasterChef is Ownable {
 
     // Add a new lp to the pool. Can only be called by the owner.
     // XXX DO NOT add the same LP token more than once. Rewards will be messed up if you do.
-    function add(
-        uint256 _allocPoint,
-        IERC20 _lpToken,
-        bool _withUpdate
-    ) public onlyOwner {
+    function add(uint256 _allocPoint, IERC20 _lpToken, bool _withUpdate) public onlyOwner {
         if (_withUpdate) {
             massUpdatePools();
         }
-        uint256 lastRewardBlock =
-            block.number > startBlock ? block.number : startBlock;
+        uint256 lastRewardBlock = block.number > startBlock ? block.number : startBlock;
         totalAllocPoint = totalAllocPoint.add(_allocPoint);
         poolInfo.push(
-            PoolInfo({
-                lpToken: _lpToken,
-                allocPoint: _allocPoint,
-                lastRewardBlock: lastRewardBlock,
-                accMunyPerShare: 0
-            })
+            PoolInfo({lpToken: _lpToken, allocPoint: _allocPoint, lastRewardBlock: lastRewardBlock, accMunyPerShare: 0})
         );
     }
 
     // Update the given pool's MUNY allocation point. Can only be called by the owner.
-    function set(
-        uint256 _pid,
-        uint256 _allocPoint,
-        bool _withUpdate
-    ) public onlyOwner {
+    function set(uint256 _pid, uint256 _allocPoint, bool _withUpdate) public onlyOwner {
         if (_withUpdate) {
             massUpdatePools();
         }
-        totalAllocPoint = totalAllocPoint.sub(poolInfo[_pid].allocPoint).add(
-            _allocPoint
-        );
+        totalAllocPoint = totalAllocPoint.sub(poolInfo[_pid].allocPoint).add(_allocPoint);
         poolInfo[_pid].allocPoint = _allocPoint;
     }
 
     // Return reward multiplier over the given _from to _to block.
-    function getMultiplier(uint256 _from, uint256 _to)
-        public
-        view
-        returns (uint256)
-    {
+    function getMultiplier(uint256 _from, uint256 _to) public view returns (uint256) {
         if (_to <= bonusEndBlock) {
             return _to.sub(_from).mul(BONUS_MULTIPLIER);
         } else if (_from >= bonusEndBlock) {
             return _to.sub(_from);
         } else {
-            return
-                bonusEndBlock.sub(_from).mul(BONUS_MULTIPLIER).add(
-                    _to.sub(bonusEndBlock)
-                );
+            return bonusEndBlock.sub(_from).mul(BONUS_MULTIPLIER).add(_to.sub(bonusEndBlock));
         }
     }
 
     // View function to see pending MUNYs on frontend.
-    function pendingMuny(uint256 _pid, address _user)
-        external
-        view
-        returns (uint256)
-    {
+    function pendingMuny(uint256 _pid, address _user) external view returns (uint256) {
         PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][_user];
 
@@ -160,14 +123,9 @@ contract MasterChef is Ownable {
         if (block.number > pool.lastRewardBlock && lpSupply != 0) {
             uint256 multiplier = getMultiplier(pool.lastRewardBlock, block.number);
 
-            uint256 munyReward =
-                multiplier.mul(munyPerBlock).mul(pool.allocPoint).div(
-                    totalAllocPoint
-                );
+            uint256 munyReward = multiplier.mul(munyPerBlock).mul(pool.allocPoint).div(totalAllocPoint);
 
-            accMunyPerShare = accMunyPerShare.add(
-                munyReward.mul(1e12).div(lpSupply)
-            );
+            accMunyPerShare = accMunyPerShare.add(munyReward.mul(1e12).div(lpSupply));
         }
 
         return user.amount.mul(accMunyPerShare).div(1e12).sub(user.rewardDebt);
@@ -193,15 +151,10 @@ contract MasterChef is Ownable {
             return;
         }
         uint256 multiplier = getMultiplier(pool.lastRewardBlock, block.number);
-        uint256 munyReward =
-            multiplier.mul(munyPerBlock).mul(pool.allocPoint).div(
-                totalAllocPoint
-            );
+        uint256 munyReward = multiplier.mul(munyPerBlock).mul(pool.allocPoint).div(totalAllocPoint);
         muny.mint(devaddr, munyReward.div(10));
         muny.mint(address(this), munyReward);
-        pool.accMunyPerShare = pool.accMunyPerShare.add(
-            munyReward.mul(1e12).div(lpSupply)
-        );
+        pool.accMunyPerShare = pool.accMunyPerShare.add(munyReward.mul(1e12).div(lpSupply));
         pool.lastRewardBlock = block.number;
     }
 
@@ -211,17 +164,10 @@ contract MasterChef is Ownable {
         UserInfo storage user = userInfo[_pid][msg.sender];
         updatePool(_pid);
         if (user.amount > 0) {
-            uint256 pending =
-                user.amount.mul(pool.accMunyPerShare).div(1e12).sub(
-                    user.rewardDebt
-                );
+            uint256 pending = user.amount.mul(pool.accMunyPerShare).div(1e12).sub(user.rewardDebt);
             safeMunyTransfer(msg.sender, pending);
         }
-        pool.lpToken.safeTransferFrom(
-            address(msg.sender),
-            address(this),
-            _amount
-        );
+        pool.lpToken.safeTransferFrom(address(msg.sender), address(this), _amount);
         user.amount = user.amount.add(_amount);
         user.rewardDebt = user.amount.mul(pool.accMunyPerShare).div(1e12);
         emit Deposit(msg.sender, _pid, _amount);
@@ -233,10 +179,7 @@ contract MasterChef is Ownable {
         UserInfo storage user = userInfo[_pid][msg.sender];
         require(user.amount >= _amount, "withdraw: not good");
         updatePool(_pid);
-        uint256 pending =
-            user.amount.mul(pool.accMunyPerShare).div(1e12).sub(
-                user.rewardDebt
-            );
+        uint256 pending = user.amount.mul(pool.accMunyPerShare).div(1e12).sub(user.rewardDebt);
         safeMunyTransfer(msg.sender, pending);
         user.amount = user.amount.sub(_amount);
         user.rewardDebt = user.amount.mul(pool.accMunyPerShare).div(1e12);

@@ -4,7 +4,6 @@ pragma solidity ^0.8.4;
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-
 contract Multicall {
     /**
      * @dev Receives and executes a batch of function calls on this contract.
@@ -20,7 +19,6 @@ contract Multicall {
 
 /// @dev Implements dutch auction where payment currency is ETH
 contract DutchAuction is Multicall, ReentrancyGuard {
-
     using SafeERC20 for IERC20;
 
     /// @dev The multiplier for decimal precision
@@ -32,6 +30,7 @@ contract DutchAuction is Multicall, ReentrancyGuard {
         uint256 endTime;
         uint256 totalTokens;
     }
+
     MarketInfo public marketInfo;
 
     /// @notice Market price variables.
@@ -39,6 +38,7 @@ contract DutchAuction is Multicall, ReentrancyGuard {
         uint256 startPrice;
         uint256 minimumPrice;
     }
+
     MarketPrice public marketPrice;
 
     /// @notice Market dynamic variables.
@@ -46,22 +46,23 @@ contract DutchAuction is Multicall, ReentrancyGuard {
         uint256 commitmentsTotal;
         bool finalized;
     }
+
     MarketStatus public marketStatus;
 
     /// @notice Address which controls auction, cannot be changed
     address admin;
     /// @notice The token being sold.
-    address public auctionToken; 
+    address public auctionToken;
     /// @notice Where the auction funds will get paid.
-    address payable public wallet;  
+    address payable public wallet;
 
     /// @notice The commited amount of accounts.
-    mapping(address => uint256) public commitments; 
+    mapping(address => uint256) public commitments;
     /// @notice Amount of tokens to claim per address.
     mapping(address => uint256) public claimed;
 
     /// @notice Event for adding a commitment.
-    event AddedCommitment(address addr, uint256 commitment);   
+    event AddedCommitment(address addr, uint256 commitment);
     /// @notice Event for finalization of the auction.
     event AuctionFinalized();
     /// @notice Event for cancellation of the auction.
@@ -93,14 +94,14 @@ contract DutchAuction is Multicall, ReentrancyGuard {
         uint256 _minimumPrice,
         address payable _wallet
     ) external {
-        require(msg.sender == admin,'invalid caller');
-        require(wallet == address(0),'re-init'); // prevents admin from re-init
+        require(msg.sender == admin, "invalid caller");
+        require(wallet == address(0), "re-init"); // prevents admin from re-init
 
         require(_startTime >= block.timestamp, "DutchAuction: start time is before current time");
         require(_endTime > _startTime, "DutchAuction: end time must be older than start price");
-        require(_totalTokens > 0,"DutchAuction: total tokens must be greater than zero");
+        require(_totalTokens > 0, "DutchAuction: total tokens must be greater than zero");
         require(_startPrice > _minimumPrice, "DutchAuction: start price must be higher than minimum price");
-        require(_minimumPrice > 0, "DutchAuction: minimum price must be greater than 0"); 
+        require(_minimumPrice > 0, "DutchAuction: minimum price must be greater than 0");
         require(_wallet != address(0), "DutchAuction: wallet is the zero address");
 
         marketInfo.startTime = _startTime;
@@ -113,7 +114,7 @@ contract DutchAuction is Multicall, ReentrancyGuard {
         auctionToken = _token;
         wallet = _wallet;
 
-        IERC20(_token).safeTransferFrom(_funder,address(this),_totalTokens);
+        IERC20(_token).safeTransferFrom(_funder, address(this), _totalTokens);
     }
 
     /**
@@ -122,8 +123,7 @@ contract DutchAuction is Multicall, ReentrancyGuard {
      * @return Average token price.
      */
     function tokenPrice() public view returns (uint256) {
-        return (marketStatus.commitmentsTotal * PRECISION * 1e18)
-            / marketInfo.totalTokens / PRECISION;
+        return (marketStatus.commitmentsTotal * PRECISION * 1e18) / marketInfo.totalTokens / PRECISION;
     }
 
     /**
@@ -153,18 +153,15 @@ contract DutchAuction is Multicall, ReentrancyGuard {
         return priceFunction();
     }
 
-
     ///--------------------------------------------------------
     /// Commit to buying tokens!
     ///--------------------------------------------------------
-
 
     /**
      * @notice Checks the amount of ETH to commit and adds the commitment. Refunds the buyer if commit is too high.
      * @param _beneficiary Auction participant ETH address.
      */
-    function commitEth(address payable _beneficiary) public payable nonReentrant
-    {
+    function commitEth(address payable _beneficiary) public payable nonReentrant {
         // Get ETH able to be committed
         uint256 ethToTransfer = calculateCommitment(msg.value);
 
@@ -193,7 +190,7 @@ contract DutchAuction is Multicall, ReentrancyGuard {
         return numerator / denominator;
     }
 
-   /**
+    /**
      * @notice How many tokens the user is able to claim.
      * @param _user Auction participant address.
      * @return claimerCommitment User commitments reduced by already claimed tokens.
@@ -269,36 +266,32 @@ contract DutchAuction is Multicall, ReentrancyGuard {
      */
     function _addCommitment(address _addr, uint256 _commitment) internal {
         require(
-            block.timestamp >= marketInfo.startTime && 
-            block.timestamp <= marketInfo.endTime, 
+            block.timestamp >= marketInfo.startTime && block.timestamp <= marketInfo.endTime,
             "DutchAuction: outside auction hours"
         );
         MarketStatus storage status = marketStatus;
-        
+
         uint256 newCommitment = commitments[_addr] + _commitment;
-        
+
         commitments[_addr] = newCommitment;
         status.commitmentsTotal = status.commitmentsTotal + _commitment;
         emit AddedCommitment(_addr, _commitment);
     }
 
-
     //--------------------------------------------------------
     // Finalize Auction
     //--------------------------------------------------------
-
 
     /**
      * @notice Cancel Auction
      * @dev Admin can cancel the auction before it starts
      */
-    function cancelAuction() public nonReentrant  
-    {
+    function cancelAuction() public nonReentrant {
         require(hasAdminRole(msg.sender));
         MarketStatus storage status = marketStatus;
         require(!status.finalized, "DutchAuction: auction already finalized");
         require(status.commitmentsTotal == 0, "DutchAuction: auction already committed");
-        IERC20(auctionToken).safeTransfer(wallet,marketInfo.totalTokens);
+        IERC20(auctionToken).safeTransfer(wallet, marketInfo.totalTokens);
         status.finalized = true;
         emit AuctionCancelled();
     }
@@ -307,35 +300,35 @@ contract DutchAuction is Multicall, ReentrancyGuard {
      * @notice Auction finishes successfully above the reserve.
      * @dev Transfer contract funds to initialized wallet.
      */
-    function finalize() public nonReentrant  
-    {
-        require(hasAdminRole(msg.sender) 
-                || wallet == msg.sender
-                || finalizeTimeExpired(), "DutchAuction: sender must be an admin");
+    function finalize() public nonReentrant {
+        require(
+            hasAdminRole(msg.sender) || wallet == msg.sender || finalizeTimeExpired(),
+            "DutchAuction: sender must be an admin"
+        );
         MarketStatus storage status = marketStatus;
 
         require(!status.finalized, "DutchAuction: auction already finalized");
         if (auctionSuccessful()) {
             /// @dev Successful auction
             /// @dev Transfer contributed tokens to wallet.
-            (bool success,) = wallet.call{value:status.commitmentsTotal}('');
-            require(success, 'ETH_TRANSFER_FAILED');
+            (bool success,) = wallet.call{value: status.commitmentsTotal}("");
+            require(success, "ETH_TRANSFER_FAILED");
         } else {
             /// @dev Failed auction
             /// @dev Return auction tokens back to wallet.
-            require(block.timestamp > marketInfo.endTime, "DutchAuction: auction has not finished yet"); 
-            IERC20(auctionToken).safeTransfer(wallet,marketInfo.totalTokens);
+            require(block.timestamp > marketInfo.endTime, "DutchAuction: auction has not finished yet");
+            IERC20(auctionToken).safeTransfer(wallet, marketInfo.totalTokens);
         }
         status.finalized = true;
         emit AuctionFinalized();
     }
 
     /// @notice Withdraws bought tokens, or returns commitment if the sale is unsuccessful.
-    function withdrawTokens() public  {
+    function withdrawTokens() public {
         withdrawTokens(msg.sender);
     }
 
-   /**
+    /**
      * @notice Withdraws bought tokens, or returns commitment if the sale is unsuccessful.
      * @dev Withdraw tokens only after auction ends.
      * @param beneficiary Whose tokens will be withdrawn.
@@ -345,9 +338,9 @@ contract DutchAuction is Multicall, ReentrancyGuard {
             require(marketStatus.finalized, "DutchAuction: not finalized");
             /// @dev Successful auction! Transfer claimed tokens.
             uint256 tokensToClaim = tokensClaimable(beneficiary);
-            require(tokensToClaim > 0, "DutchAuction: No tokens to claim"); 
-            claimed[beneficiary] = claimed[beneficiary]+tokensToClaim;
-            IERC20(auctionToken).safeTransfer(beneficiary,tokensToClaim);
+            require(tokensToClaim > 0, "DutchAuction: No tokens to claim");
+            claimed[beneficiary] = claimed[beneficiary] + tokensToClaim;
+            IERC20(auctionToken).safeTransfer(beneficiary, tokensToClaim);
         } else {
             /// @dev Auction did not meet reserve price.
             /// @dev Return committed funds back to user.
@@ -355,8 +348,8 @@ contract DutchAuction is Multicall, ReentrancyGuard {
             uint256 fundsCommitted = commitments[beneficiary];
             commitments[beneficiary] = 0; // Stop multiple withdrawals and free some gas
 
-            (bool success,) = payable(beneficiary).call{value:fundsCommitted}('');
-            require(success, 'ETH_TRANSFER_FAILED');
+            (bool success,) = payable(beneficiary).call{value: fundsCommitted}("");
+            require(success, "ETH_TRANSFER_FAILED");
         }
     }
 
@@ -364,5 +357,4 @@ contract DutchAuction is Multicall, ReentrancyGuard {
     function hasAdminRole(address user) internal returns (bool) {
         return user == admin;
     }
-
 }

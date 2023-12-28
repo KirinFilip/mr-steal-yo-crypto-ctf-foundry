@@ -5,10 +5,8 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 
-
 // NotSushiToken with Governance.
 contract NotSushiToken is ERC20("NotSushi", "NotSushi"), Ownable {
-
     using SafeMath for uint256;
 
     /// @notice Creates `_amount` token to `_to`. Must only be called by the owner.
@@ -19,7 +17,7 @@ contract NotSushiToken is ERC20("NotSushi", "NotSushi"), Ownable {
     }
 
     /// @notice A record of each accounts delegate
-    mapping (address => address) internal _delegates;
+    mapping(address => address) internal _delegates;
 
     /// @notice A checkpoint for marking number of votes from a given block
     struct Checkpoint {
@@ -28,23 +26,23 @@ contract NotSushiToken is ERC20("NotSushi", "NotSushi"), Ownable {
     }
 
     /// @notice A record of votes checkpoints for each account, by index
-    mapping (address => mapping (uint32 => Checkpoint)) public checkpoints;
+    mapping(address => mapping(uint32 => Checkpoint)) public checkpoints;
 
     /// @notice The number of checkpoints for each account
-    mapping (address => uint32) public numCheckpoints;
+    mapping(address => uint32) public numCheckpoints;
 
     /// @notice Keeps track of whether an address is WLed
-    mapping (address => bool) private wled;
+    mapping(address => bool) private wled;
 
     /// @notice An event thats emitted when an account changes its delegate
     event DelegateChanged(address indexed delegator, address indexed fromDelegate, address indexed toDelegate);
 
     /// @notice An event thats emitted when a delegate account's vote balance changes
-    event DelegateVotesChanged(address indexed delegate, uint previousBalance, uint newBalance);
+    event DelegateVotesChanged(address indexed delegate, uint256 previousBalance, uint256 newBalance);
 
     /// @notice Only allows WLed voters
     modifier onlyWledVoter() {
-        require(wled[msg.sender],'!WLed address');
+        require(wled[msg.sender], "!WLed address");
         _;
     }
 
@@ -52,26 +50,22 @@ contract NotSushiToken is ERC20("NotSushi", "NotSushi"), Ownable {
      * @notice Delegate votes from `msg.sender` to `delegatee`
      * @param delegator The address to get delegatee for
      */
-    function delegates(address delegator)
-        external
-        view
-        returns (address)
-    {
+    function delegates(address delegator) external view returns (address) {
         return _delegates[delegator];
     }
 
     /// @dev adds address as WLed voters - WLs cannot be later revoked
     function addWledAddresses(address[] calldata _toAdds) external onlyOwner {
-        for (uint i=0; i<_toAdds.length; ++i) {
-            wled[_toAdds[i]]=true;
+        for (uint256 i = 0; i < _toAdds.length; ++i) {
+            wled[_toAdds[i]] = true;
         }
     }
 
-   /**
-    * @notice Delegate votes from `msg.sender` to `delegatee`
-    * @dev only WLed addresses are allowed to delegate votes
-    * @param delegatee The address to delegate votes to
-    */
+    /**
+     * @notice Delegate votes from `msg.sender` to `delegatee`
+     * @dev only WLed addresses are allowed to delegate votes
+     * @param delegatee The address to delegate votes to
+     */
     function delegate(address delegatee) external onlyWledVoter {
         return _delegate(msg.sender, delegatee);
     }
@@ -81,11 +75,7 @@ contract NotSushiToken is ERC20("NotSushi", "NotSushi"), Ownable {
      * @param account The address to get votes balance
      * @return The number of current votes for `account`
      */
-    function getCurrentVotes(address account)
-        external
-        view
-        returns (uint256)
-    {
+    function getCurrentVotes(address account) external view returns (uint256) {
         uint32 nCheckpoints = numCheckpoints[account];
         return nCheckpoints > 0 ? checkpoints[account][nCheckpoints - 1].votes : 0;
     }
@@ -97,11 +87,7 @@ contract NotSushiToken is ERC20("NotSushi", "NotSushi"), Ownable {
      * @param blockNumber The block number to get the vote balance at
      * @return The number of votes the account had as of the given block
      */
-    function getPriorVotes(address account, uint blockNumber)
-        external
-        view
-        returns (uint256)
-    {
+    function getPriorVotes(address account, uint256 blockNumber) external view returns (uint256) {
         require(blockNumber < block.number, "SUSHI::getPriorVotes: not yet determined");
 
         uint32 nCheckpoints = numCheckpoints[account];
@@ -136,9 +122,7 @@ contract NotSushiToken is ERC20("NotSushi", "NotSushi"), Ownable {
     }
 
     /// @dev assigns entire balance of votes from old delagatee to new delagatee
-    function _delegate(address delegator, address delegatee)
-        internal
-    {
+    function _delegate(address delegator, address delegatee) internal {
         address currentDelegate = _delegates[delegator];
         uint256 delegatorBalance = balanceOf(delegator); // balance of underlying SUSHIs (not scaled);
         _delegates[delegator] = delegatee;
@@ -170,19 +154,14 @@ contract NotSushiToken is ERC20("NotSushi", "NotSushi"), Ownable {
     }
 
     /// @dev update the recorded vote count for a given `delegatee` at blockNumber
-    function _writeCheckpoint(
-        address delegatee,
-        uint32 nCheckpoints,
-        uint256 oldVotes,
-        uint256 newVotes
-    )
-        internal
-    {
+    function _writeCheckpoint(address delegatee, uint32 nCheckpoints, uint256 oldVotes, uint256 newVotes) internal {
         uint32 blockNumber = safe32(block.number, "SUSHI::_writeCheckpoint: block number exceeds 32 bits");
 
-        if (nCheckpoints > 0 && checkpoints[delegatee][nCheckpoints - 1].fromBlock == blockNumber) { // same block update
+        if (nCheckpoints > 0 && checkpoints[delegatee][nCheckpoints - 1].fromBlock == blockNumber) {
+            // same block update
             checkpoints[delegatee][nCheckpoints - 1].votes = newVotes;
-        } else { // new block update
+        } else {
+            // new block update
             checkpoints[delegatee][nCheckpoints] = Checkpoint(blockNumber, newVotes);
             numCheckpoints[delegatee] = nCheckpoints + 1;
         }
@@ -190,9 +169,8 @@ contract NotSushiToken is ERC20("NotSushi", "NotSushi"), Ownable {
         emit DelegateVotesChanged(delegatee, oldVotes, newVotes);
     }
 
-    function safe32(uint n, string memory errorMessage) internal pure returns (uint32) {
-        require(n < 2**32, errorMessage);
+    function safe32(uint256 n, string memory errorMessage) internal pure returns (uint32) {
+        require(n < 2 ** 32, errorMessage);
         return uint32(n);
     }
-
 }

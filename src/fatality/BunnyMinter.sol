@@ -9,7 +9,6 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@uniswap/v2-periphery/contracts/interfaces/IUniswapV2Router02.sol";
 import "@uniswap/v2-core/contracts/interfaces/IUniswapV2Pair.sol";
 
-
 interface IMinter {
     function mint(address user, uint256 amount) external;
 }
@@ -21,7 +20,6 @@ interface IZapBSC {
 /// @dev Handles logic for minting BUNNY to users based on provided performanceFee
 /// @dev LP tokens taken as performanceFee are sent to contract owner
 contract BunnyMinter is Ownable {
-
     using SafeERC20 for IERC20;
     using SafeMath for uint256;
 
@@ -38,18 +36,12 @@ contract BunnyMinter is Ownable {
 
     address private _minter;
 
-    modifier onlyMinter {
+    modifier onlyMinter() {
         require(msg.sender == _minter);
         _;
     }
 
-    constructor(
-        address _zapBSC,
-        address _router,
-        address _bnb,
-        address _bunny, 
-        address _bunnyBNB
-    ) {
+    constructor(address _zapBSC, address _router, address _bnb, address _bunny, address _bunnyBNB) {
         zapBSC = IZapBSC(_zapBSC);
         router = IUniswapV2Router02(_router);
         BNB = _bnb;
@@ -63,12 +55,8 @@ contract BunnyMinter is Ownable {
 
     /// @dev Wrapper for converting fees to BUNNY-BNB LP and minting user BUNNY
     /// @param asset The address of the LP token used for the performance fee
-    function mintForV2(
-        address asset, 
-        uint256 performanceFee, 
-        address to
-    ) external onlyMinter {
-        uint feeSum = performanceFee; // the only fee
+    function mintForV2(address asset, uint256 performanceFee, address to) external onlyMinter {
+        uint256 feeSum = performanceFee; // the only fee
         _transferAsset(asset, feeSum);
 
         uint256 bunnyBNBAmount = _zapAssetsToBunnyBNB(asset, feeSum);
@@ -94,10 +82,10 @@ contract BunnyMinter is Ownable {
     }
 
     /// @dev Determines the price of `asset` LP in BNB terms, per LP token
-    function valueOfAsset(address asset, uint256 amount) public view returns (uint valueInBNB) {
+    function valueOfAsset(address asset, uint256 amount) public view returns (uint256 valueInBNB) {
         if (IUniswapV2Pair(asset).totalSupply() == 0) return 0;
 
-        (uint256 reserve0, uint256 reserve1, ) = IUniswapV2Pair(asset).getReserves();
+        (uint256 reserve0, uint256 reserve1,) = IUniswapV2Pair(asset).getReserves();
         if (IUniswapV2Pair(asset).token0() == BNB) {
             valueInBNB = amount.mul(reserve0).mul(2).div(IUniswapV2Pair(asset).totalSupply());
         } else if (IUniswapV2Pair(asset).token1() == BNB) {
@@ -108,10 +96,7 @@ contract BunnyMinter is Ownable {
     }
 
     /// @dev Zaps `asset` into BUNNY-BNB liquidity
-    function _zapAssetsToBunnyBNB(
-        address asset, 
-        uint256 amount
-    ) private returns (uint256 bunnyBNBAmount) {
+    function _zapAssetsToBunnyBNB(address asset, uint256 amount) private returns (uint256 bunnyBNBAmount) {
         uint256 _initBunnyBNBAmount = IERC20(BUNNY_BNB).balanceOf(address(this));
 
         if (IERC20(asset).allowance(address(this), address(router)) == 0) {
@@ -122,13 +107,8 @@ contract BunnyMinter is Ownable {
         address token0 = pair.token0();
         address token1 = pair.token1();
 
-        (uint256 amountToken0, uint256 amountToken1) = router.removeLiquidity(
-            token0, token1, 
-            amount, 
-            0, 0, 
-            address(this), 
-            block.timestamp
-        );
+        (uint256 amountToken0, uint256 amountToken1) =
+            router.removeLiquidity(token0, token1, amount, 0, 0, address(this), block.timestamp);
 
         if (IERC20(token0).allowance(address(this), address(zapBSC)) == 0) {
             IERC20(token0).safeApprove(address(zapBSC), type(uint256).max);
@@ -144,18 +124,17 @@ contract BunnyMinter is Ownable {
     }
 
     /// @dev Mints BUNNY for user and devs
-    function _mint(uint amount, address to) private {
+    function _mint(uint256 amount, address to) private {
         IMinter tokenBUNNY = IMinter(BUNNY);
 
         tokenBUNNY.mint(to, amount);
 
         uint256 bunnyForDev = amount.mul(15).div(100);
-        tokenBUNNY.mint(owner(),bunnyForDev);
+        tokenBUNNY.mint(owner(), bunnyForDev);
     }
 
     /// @dev Wrapper for transfering `asset` to this contract
-    function _transferAsset(address asset, uint amount) private {
+    function _transferAsset(address asset, uint256 amount) private {
         IERC20(asset).safeTransferFrom(msg.sender, address(this), amount);
     }
-
 }

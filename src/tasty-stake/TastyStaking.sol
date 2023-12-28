@@ -6,12 +6,10 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-
 /**
-* Based on synthetix BaseRewardPool.sol & convex cvxLocker
-*/
+ * Based on synthetix BaseRewardPool.sol & convex cvxLocker
+ */
 contract TastyStaking is Ownable {
-
     using SafeERC20 for IERC20;
 
     IERC20 public stakingToken;
@@ -32,7 +30,7 @@ contract TastyStaking is Ownable {
 
     struct Reward {
         uint40 periodFinish;
-        uint216 rewardRate;  // The reward amount (1e18) per total reward duration
+        uint216 rewardRate; // The reward amount (1e18) per total reward duration
         uint40 lastUpdateTime;
         uint216 rewardPerTokenStored;
     }
@@ -79,12 +77,15 @@ contract TastyStaking is Ownable {
             return rewardData[_rewardsToken].rewardPerTokenStored;
         }
 
-        return
-            rewardData[_rewardsToken].rewardPerTokenStored +
-            (((_lastTimeRewardApplicable(rewardData[_rewardsToken].periodFinish) -
-                rewardData[_rewardsToken].lastUpdateTime) *
-                rewardData[_rewardsToken].rewardRate * 1e18)
-                / totalSupply());
+        return rewardData[_rewardsToken].rewardPerTokenStored
+            + (
+                (
+                    (
+                        _lastTimeRewardApplicable(rewardData[_rewardsToken].periodFinish)
+                            - rewardData[_rewardsToken].lastUpdateTime
+                    ) * rewardData[_rewardsToken].rewardRate * 1e18
+                ) / totalSupply()
+            );
     }
 
     function rewardPerToken(address _rewardsToken) external view returns (uint256) {
@@ -101,14 +102,9 @@ contract TastyStaking is Ownable {
     }
 
     /// @dev logic for calculating amount you've earned in total
-    function _earned(
-        address _account,
-        address _rewardsToken,
-        uint256 _balance
-    ) internal view returns (uint256) {
-        return
-            (_balance * (_rewardPerToken(_rewardsToken) - userRewardPerTokenPaid[_account][_rewardsToken])) / 1e18 +
-            claimableRewards[_account][_rewardsToken];
+    function _earned(address _account, address _rewardsToken, uint256 _balance) internal view returns (uint256) {
+        return (_balance * (_rewardPerToken(_rewardsToken) - userRewardPerTokenPaid[_account][_rewardsToken])) / 1e18
+            + claimableRewards[_account][_rewardsToken];
     }
 
     function stake(uint256 _amount) external {
@@ -122,7 +118,7 @@ contract TastyStaking is Ownable {
 
     function stakeFor(address _for, uint256 _amount) public {
         require(_amount > 0, "Cannot stake 0");
-        
+
         // pull tokens and apply stake
         stakingToken.safeTransferFrom(msg.sender, address(this), _amount);
         _applyStake(_for, _amount);
@@ -149,7 +145,7 @@ contract TastyStaking is Ownable {
 
         stakingToken.safeTransfer(toAddress, amount);
         emit Withdrawn(staker, toAddress, amount);
-     
+
         if (claimRewards) {
             // can call internal because user reward already updated
             _getRewards(staker, rewardsToAddress);
@@ -203,9 +199,11 @@ contract TastyStaking is Ownable {
     function _notifyReward(address _rewardsToken, uint256 _amount) internal {
         Reward storage rdata = rewardData[_rewardsToken];
 
-        if (block.timestamp >= rdata.periodFinish) { // new reward token
+        if (block.timestamp >= rdata.periodFinish) {
+            // new reward token
             rdata.rewardRate = uint216(_amount / DURATION);
-        } else { // adding to existing reward token
+        } else {
+            // adding to existing reward token
             uint256 remaining = uint256(rdata.periodFinish) - block.timestamp;
             uint256 leftover = remaining * rdata.rewardRate;
             rdata.rewardRate = uint216((_amount + leftover) / DURATION);
@@ -216,14 +214,11 @@ contract TastyStaking is Ownable {
     }
 
     /// @dev set the amount of reward to be distributed for a given token & transfer reward tokens
-    function notifyRewardAmount(
-        address _rewardsToken,
-        uint256 _amount
-    ) external updateReward(address(0)) {
+    function notifyRewardAmount(address _rewardsToken, uint256 _amount) external updateReward(address(0)) {
         require(msg.sender == rewardDistributor, "not distributor");
         require(_amount > 0, "No reward");
         require(rewardData[_rewardsToken].lastUpdateTime != 0, "unknown reward token");
-        
+
         _notifyReward(_rewardsToken, _amount);
 
         IERC20(_rewardsToken).safeTransferFrom(msg.sender, address(this), _amount);
@@ -237,28 +232,28 @@ contract TastyStaking is Ownable {
     }
 
     /**
-      * @notice For migrations to a new staking contract:
-      *         1. User/DApp checks if the user has a balance in the `oldStakingContract`
-      *         2. If yes, user calls this function `newStakingContract.migrateStake(oldStakingContract, balance)`
-      *         3. Staking balances are migrated to the new contract, user will start to earn rewards in the new contract.
-      *         4. Any claimable rewards in the old contract are sent directly to the user's wallet.
-      * @param oldStaking The old staking contract funds are being migrated from.
-      * @param amount The amount to migrate - generally this would be the staker's balance
-      */
+     * @notice For migrations to a new staking contract:
+     *         1. User/DApp checks if the user has a balance in the `oldStakingContract`
+     *         2. If yes, user calls this function `newStakingContract.migrateStake(oldStakingContract, balance)`
+     *         3. Staking balances are migrated to the new contract, user will start to earn rewards in the new contract.
+     *         4. Any claimable rewards in the old contract are sent directly to the user's wallet.
+     * @param oldStaking The old staking contract funds are being migrated from.
+     * @param amount The amount to migrate - generally this would be the staker's balance
+     */
     function migrateStake(address oldStaking, uint256 amount) external {
         TastyStaking(oldStaking).migrateWithdraw(msg.sender, amount);
         _applyStake(msg.sender, amount);
     }
 
     /**
-      * @notice For migrations to a new staking contract.
-      *         1. Withdraw `staker`s tokens to the new staking contract (the migrator)
-      *         2. Any existing rewards are claimed and sent directly to the `staker`
-      * @dev Called only from the new staking contract (the migrator).
-      *      `setMigrator(new_staking_contract)` needs to be called first
-      * @param staker The staker who is being migrated to a new staking contract.
-      * @param amount The amount to migrate - generally this would be the staker's balance
-      */
+     * @notice For migrations to a new staking contract.
+     *         1. Withdraw `staker`s tokens to the new staking contract (the migrator)
+     *         2. Any existing rewards are claimed and sent directly to the `staker`
+     * @dev Called only from the new staking contract (the migrator).
+     *      `setMigrator(new_staking_contract)` needs to be called first
+     * @param staker The staker who is being migrated to a new staking contract.
+     * @param amount The amount to migrate - generally this would be the staker's balance
+     */
     function migrateWithdraw(address staker, uint256 amount) external onlyMigrator {
         _withdrawFor(staker, msg.sender, amount, true, staker);
     }
@@ -283,5 +278,4 @@ contract TastyStaking is Ownable {
         }
         _;
     }
-
 }

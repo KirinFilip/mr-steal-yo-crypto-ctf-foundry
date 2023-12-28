@@ -6,7 +6,6 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
-
 interface IBunnyMinter {
     function performanceFee(uint256 profit) external view returns (uint256);
     function mintForV2(address asset, uint256 _performanceFee, address to) external;
@@ -16,10 +15,9 @@ interface IBunnyMinter {
 /// @dev Specifically, withdrawing LP tokens results in 1% being converted to BUNNY which
 /// @dev is sent to the user and 99% of the LP tokens is returned directly to the user
 /// @dev All LP tokens must be withdrawn by user in order to receive earned fees
-/// auto-compounding logic is not included here, irrelevant to the exploit - 
+/// auto-compounding logic is not included here, irrelevant to the exploit -
 /// this will just mean that user has earned no fees at the time of withdrawal
 contract AutoCompoundVault is Ownable {
-
     using SafeERC20 for IERC20;
     using SafeMath for uint256;
 
@@ -27,7 +25,7 @@ contract AutoCompoundVault is Ownable {
     IBunnyMinter internal _minter;
 
     uint256 public totalShares;
-    mapping (address => uint256) private _shares;
+    mapping(address => uint256) private _shares;
 
     uint256 private constant DUST = 1000;
 
@@ -35,7 +33,7 @@ contract AutoCompoundVault is Ownable {
 
     constructor(address _stakingTokenAddress, address _minterAddress) {
         _stakingToken = IERC20(_stakingTokenAddress);
-        _stakingToken.approve(_minterAddress,type(uint256).max);
+        _stakingToken.approve(_minterAddress, type(uint256).max);
         _minter = IBunnyMinter(_minterAddress);
     }
 
@@ -55,11 +53,7 @@ contract AutoCompoundVault is Ownable {
         uint256 performanceFee = _minter.performanceFee(profit); // fee is 1% of LP tokens
 
         if (performanceFee > DUST) {
-            _minter.mintForV2(
-                address(_stakingToken), 
-                performanceFee, 
-                msg.sender
-            );
+            _minter.mintForV2(address(_stakingToken), performanceFee, msg.sender);
             amount = amount.sub(performanceFee);
         }
 
@@ -83,7 +77,7 @@ contract AutoCompoundVault is Ownable {
     }
 
     /// @dev Gets total balance of `_stakingToken` deposited into this contract
-    /// normally this would get the balance of the LP deposited in MasterChef - 
+    /// normally this would get the balance of the LP deposited in MasterChef -
     /// however this is not done here bc auto-compounding logic is removed
     function balance() public view returns (uint256 amount) {
         amount = _stakingToken.balanceOf(address(this));
@@ -115,5 +109,4 @@ contract AutoCompoundVault is Ownable {
     }
 
     // auto-compounding logic ...
-
 }
