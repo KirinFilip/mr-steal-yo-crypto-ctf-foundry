@@ -9,6 +9,8 @@ import {Token} from "src/other/Token.sol";
 import {GovToken} from "src/freebie/GovToken.sol";
 import {RewardsAdvisor} from "src/freebie/RewardsAdvisor.sol";
 
+import {FreebieAttack} from "test/AttackContracts/7-FreebieAttack.sol";
+
 contract Testing is Test {
     address attacker = makeAddr("attacker");
     address o1 = makeAddr("o1");
@@ -62,7 +64,14 @@ contract Testing is Test {
     function testChallengeExploit() public {
         vm.startPrank(attacker, attacker);
 
-        // implement solution here
+        // console.log(govToken.balanceOf(address(rewardsAdvisor)));
+        // console.log(farm.balanceOf(address(rewardsAdvisor)));
+        // console.log(govToken.balanceOf(address(adminUser)));
+        // console.log(farm.balanceOf(address(adminUser)));
+        // console.log("totalSupply farm", farm.totalSupply());
+        // console.log("totalSupply xFarm", govToken.totalSupply());
+        FreebieAttack freebieAttack = new FreebieAttack(farm, govToken, rewardsAdvisor);
+        freebieAttack.attack();
 
         vm.stopPrank();
         validation();
