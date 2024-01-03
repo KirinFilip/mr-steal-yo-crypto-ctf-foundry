@@ -68,20 +68,20 @@ contract SafuMakerV2 is Ownable {
 
     /// @dev converts a single trading pair's rewards into SAFU token
     function _convert(address token0, address token1) internal {
-        ISafuPair pair = ISafuPair(factory.getPair(token0, token1));
+        ISafuPair pair = ISafuPair(factory.getPair(token0, token1)); // get the LP token from the two tokens
 
-        require(address(pair) != address(0), "SafuMakerV2: Invalid pair");
+        require(address(pair) != address(0), "SafuMakerV2: Invalid pair"); // make sure the pair exists
 
-        IERC20(address(pair)).safeTransfer(address(pair), pair.balanceOf(address(this)));
+        IERC20(address(pair)).safeTransfer(address(pair), pair.balanceOf(address(this))); // transfer all LP from this contract to the pair
 
         // We don't take amount0 and amount1 from here, as it won't take into account reflect tokens.
-        pair.burn(address(this));
+        pair.burn(address(this)); // burn the pairs LP and transfer the two pair tokens to this contract
 
         // We get the amount0 and amount1 by their respective balance of SafuMakerV2.
-        uint256 amount0 = IERC20(token0).balanceOf(address(this));
-        uint256 amount1 = IERC20(token1).balanceOf(address(this));
+        uint256 amount0 = IERC20(token0).balanceOf(address(this)); // get the contract balance of token0
+        uint256 amount1 = IERC20(token1).balanceOf(address(this)); // get the contract balance of token1
 
-        _convertStep(token0, token1, amount0, amount1);
+        _convertStep(token0, token1, amount0, amount1); // convert the amounts of input tokens to SAFU
     }
 
     /// @dev converts all tokens to SAFU token

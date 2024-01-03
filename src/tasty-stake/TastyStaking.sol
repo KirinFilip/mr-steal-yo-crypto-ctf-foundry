@@ -18,7 +18,7 @@ contract TastyStaking is Ownable {
     uint256 public constant DURATION = 86400 * 7; // fixed duration for rewards (7 days)
     uint256 private _totalSupply;
 
-    address[] public rewardTokens;
+    address[] public rewardTokens; // @audit there can be more reward tokens ?
 
     mapping(address => uint256) private _balances;
     mapping(address => Reward) public rewardData;
@@ -42,28 +42,30 @@ contract TastyStaking is Ownable {
     event UpdatedRewardDistributor(address distributor);
     event MigratorSet(address migrator);
 
+    // @audit-ok
     constructor(address _stakingToken, address _distributor) {
         stakingToken = IERC20(_stakingToken);
         rewardDistributor = _distributor;
     }
 
-    // set distributor of rewards
+    // set distributor of rewards // @audit-ok
     function setRewardDistributor(address _distributor) external onlyOwner {
         rewardDistributor = _distributor;
 
         emit UpdatedRewardDistributor(_distributor);
     }
 
+    // @audit-ok
     function totalSupply() public view returns (uint256) {
         return _totalSupply;
     }
 
-    /// @dev returns the balance of staking token
+    /// @dev returns the balance of staking token // @audit-ok
     function balanceOf(address account) public view returns (uint256) {
         return _balances[account];
     }
 
-    /// @dev add a new reward token to be distributed
+    /// @dev add a new reward token to be distributed // @audit-ok
     function addReward(address _rewardToken) external onlyOwner {
         require(rewardData[_rewardToken].lastUpdateTime == 0, "exists");
         rewardTokens.push(_rewardToken);
@@ -88,15 +90,17 @@ contract TastyStaking is Ownable {
             );
     }
 
+    // @audit-ok
     function rewardPerToken(address _rewardsToken) external view returns (uint256) {
         return _rewardPerToken(_rewardsToken);
     }
 
+    // @audit-ok
     function rewardPeriodFinish(address _token) external view returns (uint40) {
         return rewardData[_token].periodFinish;
     }
 
-    /// @dev calculate amount earned for `_account`
+    /// @dev calculate amount earned for `_account` // @audit-ok
     function earned(address _account, address _rewardsToken) external view returns (uint256) {
         return _earned(_account, _rewardsToken, _balances[_account]);
     }
@@ -107,15 +111,18 @@ contract TastyStaking is Ownable {
             + claimableRewards[_account][_rewardsToken];
     }
 
+    // @audit-ok
     function stake(uint256 _amount) external {
         stakeFor(msg.sender, _amount);
     }
 
+    // @audit-ok
     function stakeAll() external {
         uint256 balance = stakingToken.balanceOf(msg.sender);
         stakeFor(msg.sender, balance);
     }
 
+    // @audit-ok
     function stakeFor(address _for, uint256 _amount) public {
         require(_amount > 0, "Cannot stake 0");
 
@@ -152,25 +159,29 @@ contract TastyStaking is Ownable {
         }
     }
 
+    // @audit-ok
     function withdraw(uint256 amount, bool claim) public {
         _withdrawFor(msg.sender, msg.sender, amount, claim, msg.sender);
     }
 
+    // @audit-ok
     function withdrawAll(bool claim) external {
         _withdrawFor(msg.sender, msg.sender, _balances[msg.sender], claim, msg.sender);
     }
 
+    // @audit-ok
     function getRewards(address staker) external updateReward(staker) {
         _getRewards(staker, staker);
     }
 
-    // @dev internal function. make sure to call only after updateReward(account)
+    // @dev internal function. make sure to call only after updateReward(account) // @audit-ok
     function _getRewards(address staker, address rewardsToAddress) internal {
         for (uint256 i; i < rewardTokens.length; i++) {
             _getReward(staker, rewardTokens[i], rewardsToAddress);
         }
     }
 
+    // @audit-ok
     function getReward(address staker, address rewardToken) external updateReward(staker) {
         _getReward(staker, rewardToken, staker);
     }
@@ -241,7 +252,7 @@ contract TastyStaking is Ownable {
      * @param amount The amount to migrate - generally this would be the staker's balance
      */
     function migrateStake(address oldStaking, uint256 amount) external {
-        TastyStaking(oldStaking).migrateWithdraw(msg.sender, amount);
+        TastyStaking(oldStaking).migrateWithdraw(msg.sender, amount); // @audit can we make a malicious contract and pass it here to withdraw all STAKE
         _applyStake(msg.sender, amount);
     }
 
