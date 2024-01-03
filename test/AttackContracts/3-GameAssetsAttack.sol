@@ -28,7 +28,7 @@ contract GameAssetsAttack {
         // to allow for wrapping the shieldAsset once
         if (!unwrap) {
             unwrap = true;
-            
+
             // calls `onERC1155Received()` again which executes the else block
             assetWrapper.wrap({nftId: 0, assetOwner: address(this), assetAddress: address(shieldAsset)});
         } else {
