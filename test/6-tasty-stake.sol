@@ -8,6 +8,8 @@ import {console} from "forge-std/console.sol";
 import {Token} from "src/other/Token.sol";
 import {TastyStaking} from "src/tasty-stake/TastyStaking.sol";
 
+import {TastyStakingAttack} from "test/AttackContracts/6-TastyStakingAttack.sol";
+
 contract Testing is Test {
     address attacker = makeAddr("attacker");
     address o1 = makeAddr("o1");
@@ -72,7 +74,8 @@ contract Testing is Test {
     function testChallengeExploit() public {
         vm.startPrank(attacker, attacker);
 
-        // implement solution here
+        TastyStakingAttack tastyStakingAttack = new TastyStakingAttack(address(tastyStaking), address(steak));
+        tastyStakingAttack.attack();
 
         vm.stopPrank();
         validation();
