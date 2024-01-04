@@ -209,8 +209,8 @@ contract BonanzaMarketplace is Ownable, ReentrancyGuard {
     }
 
     function _buyItem(uint256 _pricePerItem, uint256 _quantity, address _owner) internal {
-        uint256 totalPrice = _pricePerItem * _quantity;
-        uint256 feeAmount = totalPrice * fee / BASIS_POINTS;
+        uint256 totalPrice = _pricePerItem * _quantity; // 100e18 * 1 = 100e18, if 100e18 * 0 = 0
+        uint256 feeAmount = totalPrice * fee / BASIS_POINTS; // 5e17 => 0.5e18, 0 * 50 / 10000 = 0
         IERC20(paymentToken).safeTransferFrom(_msgSender(), feeReceipient, feeAmount);
         IERC20(paymentToken).safeTransferFrom(_msgSender(), _owner, totalPrice - feeAmount);
     }
