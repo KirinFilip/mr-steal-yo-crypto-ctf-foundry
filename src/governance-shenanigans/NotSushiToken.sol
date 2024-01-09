@@ -50,11 +50,13 @@ contract NotSushiToken is ERC20("NotSushi", "NotSushi"), Ownable {
      * @notice Delegate votes from `msg.sender` to `delegatee`
      * @param delegator The address to get delegatee for
      */
+    // @audit-ok
     function delegates(address delegator) external view returns (address) {
         return _delegates[delegator];
     }
 
     /// @dev adds address as WLed voters - WLs cannot be later revoked
+    // @audit-ok
     function addWledAddresses(address[] calldata _toAdds) external onlyOwner {
         for (uint256 i = 0; i < _toAdds.length; ++i) {
             wled[_toAdds[i]] = true;
@@ -66,6 +68,7 @@ contract NotSushiToken is ERC20("NotSushi", "NotSushi"), Ownable {
      * @dev only WLed addresses are allowed to delegate votes
      * @param delegatee The address to delegate votes to
      */
+    // @audit check internal function
     function delegate(address delegatee) external onlyWledVoter {
         return _delegate(msg.sender, delegatee);
     }
@@ -75,6 +78,7 @@ contract NotSushiToken is ERC20("NotSushi", "NotSushi"), Ownable {
      * @param account The address to get votes balance
      * @return The number of current votes for `account`
      */
+    // @audit-ok
     function getCurrentVotes(address account) external view returns (uint256) {
         uint32 nCheckpoints = numCheckpoints[account];
         return nCheckpoints > 0 ? checkpoints[account][nCheckpoints - 1].votes : 0;
@@ -87,6 +91,7 @@ contract NotSushiToken is ERC20("NotSushi", "NotSushi"), Ownable {
      * @param blockNumber The block number to get the vote balance at
      * @return The number of votes the account had as of the given block
      */
+    // @audit-ok
     function getPriorVotes(address account, uint256 blockNumber) external view returns (uint256) {
         require(blockNumber < block.number, "SUSHI::getPriorVotes: not yet determined");
 
@@ -169,6 +174,7 @@ contract NotSushiToken is ERC20("NotSushi", "NotSushi"), Ownable {
         emit DelegateVotesChanged(delegatee, oldVotes, newVotes);
     }
 
+    // @audit-ok chisel tests
     function safe32(uint256 n, string memory errorMessage) internal pure returns (uint32) {
         require(n < 2 ** 32, errorMessage);
         return uint32(n);

