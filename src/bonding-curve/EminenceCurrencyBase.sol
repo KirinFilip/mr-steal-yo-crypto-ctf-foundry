@@ -61,6 +61,7 @@ contract EminenceCurrencyBase is ContinuousToken, ERC20Detailed {
         _burn(_from, _amount);
     }
 
+    // @note buy `_bought` EMN for `_amount` of DAI
     function buy(uint256 _amount, uint256 _min) external returns (uint256 _bought) {
         _bought = _buy(_amount);
         require(_bought >= _min, "slippage");
@@ -69,6 +70,7 @@ contract EminenceCurrencyBase is ContinuousToken, ERC20Detailed {
         emit CashShopBuy(msg.sender, _bought, _amount);
     }
 
+    // @note sell `_amount` of EMN for `_bought` DAI
     function sell(uint256 _amount, uint256 _min) external returns (uint256 _bought) {
         _bought = _sell(_amount);
         require(_bought >= _min, "slippage");

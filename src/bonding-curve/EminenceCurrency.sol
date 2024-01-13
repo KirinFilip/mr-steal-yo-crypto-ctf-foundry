@@ -68,14 +68,16 @@ contract EminenceCurrency is ContinuousToken, ERC20Detailed {
         _burn(_from, _amount);
     }
 
+    // @note buy `_bought` TOKEN for `_amount` of EMN
     function buy(uint256 _amount, uint256 _min) external returns (uint256 _bought) {
         _bought = _buy(_amount);
         require(_bought >= _min, "slippage");
-        EMN.claim(msg.sender, _amount);
+        EMN.claim(msg.sender, _amount); // burns EMN tokens
         _mint(msg.sender, _bought);
         emit CashShopBuy(msg.sender, _bought, _amount);
     }
 
+    // @note sell `_amount` of TOKEN for `_bought` EMN
     function sell(uint256 _amount, uint256 _min) external returns (uint256 _bought) {
         _bought = _sell(_amount);
         require(_bought >= _min, "slippage");

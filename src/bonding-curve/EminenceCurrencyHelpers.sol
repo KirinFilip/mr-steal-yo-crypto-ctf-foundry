@@ -187,7 +187,7 @@ contract ContinuousToken is ERC20 {
     uint256 public reserveBalance = 1 * 10 ** 15;
     uint32 public reserveRatio;
 
-    BondingCurve public constant CURVE = BondingCurve(0xDDd9A038D57372934f1b9c52bd8621F5ED4268DF);
+    BondingCurve public constant CURVE = BondingCurve(0xDDd9A038D57372934f1b9c52bd8621F5ED4268DF); // @audit smelly
 
     function _buy(uint256 _amount) internal returns (uint256 _bought) {
         _bought = _continuousMint(_amount);

@@ -12,6 +12,8 @@ import {IWETH} from "@uniswap/v2-periphery/contracts/interfaces/IWETH.sol";
 import {Token} from "src/other/Token.sol";
 import {IBondingCurve, IEminenceCurrency} from "src/bonding-curve/EminenceInterfaces.sol";
 
+import {BondingCurveAttack} from "./AttackContracts/11-BondingCurveAttack.sol";
+
 contract Testing is Test {
     address attacker = makeAddr("attacker");
     address o1 = makeAddr("o1");
@@ -28,6 +30,8 @@ contract Testing is Test {
     IEminenceCurrency eminenceCurrencyBase;
     IEminenceCurrency eminenceCurrency;
     IBondingCurve bancorBondingCurve;
+
+    BondingCurveAttack attackContract;
 
     /// preliminary state
     function setUp() public {
@@ -118,7 +122,8 @@ contract Testing is Test {
     function testChallengeExploit() public {
         vm.startPrank(attacker, attacker);
 
-        // implement solution here
+        attackContract = new BondingCurveAttack(dai, uniPair, eminenceCurrencyBase, eminenceCurrency);
+        attackContract.attack();
 
         vm.stopPrank();
         validation();
