@@ -12,6 +12,8 @@ import {IWETH} from "@uniswap/v2-periphery/contracts/interfaces/IWETH.sol";
 import {Token} from "src/other/Token.sol";
 import {FlashLoaner} from "src/flash-loaner/FlashLoaner.sol";
 
+import {FlashLoanerAttack} from "./AttackContracts/12-FlashLoanerAttack.sol";
+
 contract Testing is Test {
     address attacker = makeAddr("attacker");
     address o1 = makeAddr("o1");
@@ -26,6 +28,8 @@ contract Testing is Test {
     Token usdc;
     Token dai;
     FlashLoaner flashLoaner;
+
+    FlashLoanerAttack attackContract;
 
     /// preliminary state
     function setUp() public {
@@ -88,7 +92,13 @@ contract Testing is Test {
     function testChallengeExploit() public {
         vm.startPrank(attacker, attacker);
 
-        // implement solution here
+        // console.log("totalSupply", flashLoaner.totalSupply());
+        // console.log("totalAssets", flashLoaner.totalAssets());
+        // console.log("adminUser shares", flashLoaner.balanceOf(adminUser));
+        // console.log("adminUser USDC", usdc.balanceOf(adminUser));
+
+        attackContract = new FlashLoanerAttack(uniPair, usdc, flashLoaner);
+        attackContract.attack();
 
         vm.stopPrank();
         validation();
