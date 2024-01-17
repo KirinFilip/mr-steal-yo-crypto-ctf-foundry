@@ -13,6 +13,8 @@ import {Token} from "src/other/Token.sol";
 import {SafuUtils} from "src/safu-swapper/SafuUtils.sol";
 import {SafuPool} from "src/safu-swapper/SafuPool.sol";
 
+import {SafuSwapperAttack} from "./AttackContracts/13-SafuSwapperAttack.sol";
+
 contract Testing is Test {
     address attacker = makeAddr("attacker");
     address o1 = makeAddr("o1");
@@ -29,6 +31,8 @@ contract Testing is Test {
     Token dai;
     SafuUtils safuUtils;
     SafuPool safuPool;
+
+    SafuSwapperAttack attackContract;
 
     /// preliminary state
     function setUp() public {
@@ -102,7 +106,12 @@ contract Testing is Test {
     function testChallengeExploit() public {
         vm.startPrank(attacker, attacker);
 
-        // implement solution here
+        console.log("-- starting balances");
+        console.log("baseAmount ", safuPool.baseAmount());  // 2 SAFU
+        console.log("tokenAmount", safuPool.tokenAmount()); // 1 USDC
+
+        attackContract = new SafuSwapperAttack(uniPair, usdc, safu, safuPool);
+        attackContract.attack();
 
         vm.stopPrank();
         validation();
