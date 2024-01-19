@@ -107,7 +107,7 @@ contract Testing is Test {
         vm.startPrank(attacker, attacker);
 
         console.log("-- starting balances");
-        console.log("baseAmount ", safuPool.baseAmount());  // 2 SAFU
+        console.log("baseAmount ", safuPool.baseAmount()); // 2 SAFU
         console.log("tokenAmount", safuPool.tokenAmount()); // 1 USDC
 
         attackContract = new SafuSwapperAttack(uniPair, usdc, safu, safuPool);
