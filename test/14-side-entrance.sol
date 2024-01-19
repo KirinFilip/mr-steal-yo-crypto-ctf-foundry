@@ -13,6 +13,8 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {Token} from "src/other/Token.sol";
 import {CallOptions} from "src/side-entrance/CallOptions.sol";
 
+import {SideEntranceAttack} from "./AttackContracts/14-SideEntranceAttack.sol";
+
 contract Testing is Test {
     address attacker = makeAddr("attacker");
     address o1 = makeAddr("o1");
@@ -29,6 +31,8 @@ contract Testing is Test {
     Token usdc;
     Token dai;
     CallOptions optionsContract;
+
+    SideEntranceAttack attackContract;
 
     /// preliminary state
     function setUp() public {
@@ -119,7 +123,9 @@ contract Testing is Test {
     function testChallengeExploit() public {
         vm.startPrank(attacker, attacker);
 
-        // implement solution here
+        attackContract =
+            new SideEntranceAttack(uniFactory, uniRouter, usdcDaiPair, usdc, optionsContract);
+        attackContract.attack();
 
         vm.stopPrank();
         validation();

