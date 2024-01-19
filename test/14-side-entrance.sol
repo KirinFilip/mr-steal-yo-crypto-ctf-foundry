@@ -123,8 +123,7 @@ contract Testing is Test {
     function testChallengeExploit() public {
         vm.startPrank(attacker, attacker);
 
-        attackContract =
-            new SideEntranceAttack(uniFactory, uniRouter, usdcDaiPair, usdc, optionsContract);
+        attackContract = new SideEntranceAttack(uniFactory, uniRouter, usdcDaiPair, usdc, optionsContract);
         attackContract.attack();
 
         vm.stopPrank();
