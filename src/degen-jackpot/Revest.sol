@@ -28,7 +28,7 @@ contract Revest is IRevest, AccessControlEnumerable, RevestAccessControl, Revest
         uint256[] memory quantities,
         IRevest.FNFTConfig memory fnftConfig
     ) external override returns (uint256) {
-        uint256 fnftId = getFNFTHandler().getNextId();
+        uint256 fnftId = getFNFTHandler().getNextId(); // get `fnftsCreated` state var
 
         {
             IRevest.LockParam memory addressLock;

